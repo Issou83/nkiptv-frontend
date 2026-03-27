@@ -1,3 +1,4 @@
+// v2.1
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
