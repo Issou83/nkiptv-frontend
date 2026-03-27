@@ -5,19 +5,19 @@ import { useUIStore } from '../../store'
 import ToastContainer from '../ui/ToastContainer'
 
 const NAV_ITEMS = [
-  { path: '/',          icon: '🏠', label: 'Accueil' },
-  { path: '/live',      icon: '📡', label: 'Live TV', badge: '10K+' },
-  { path: '/player',    icon: '▶',  label: 'Player' },
-  { path: '/favorites', icon: '⭐', label: 'Favoris' },
-  { path: '/epg',       icon: '📅', label: 'Programme' },
-  { path: '/search',    icon: '🔍', label: 'Recherche' },
-  { path: '/playlists', icon: '📂', label: 'Playlists' },
-  { path: '/profiles',  icon: '👥', label: 'Profils' },
-  { path: '/pricing',   icon: '💎', label: 'Premium' },
-  { path: '/settings',  icon: '⚙️', label: 'Paramètres' },
+  { path: '/',          icon: '🏠', label: 'Accueil',    mobile: true  },
+  { path: '/live',      icon: '📡', label: 'Live TV',    mobile: true,  badge: '10K+' },
+  { path: '/search',    icon: '🔍', label: 'Recherche',  mobile: true  },
+  { path: '/favorites', icon: '⭐', label: 'Favoris',    mobile: true  },
+  { path: '/profiles',  icon: '👥', label: 'Profils',    mobile: true  },
+  { path: '/epg',       icon: '📅', label: 'Programme',  mobile: false },
+  { path: '/player',    icon: '▶',  label: 'Player',     mobile: false },
+  { path: '/playlists', icon: '📂', label: 'Playlists',  mobile: false },
+  { path: '/pricing',   icon: '💎', label: 'Premium',    mobile: false },
+  { path: '/settings',  icon: '⚙️', label: 'Paramètres', mobile: false },
 ]
 
-const ADMIN_NAV = { path: '/admin', icon: '🛡️', label: 'Admin' }
+const ADMIN_NAV = { path: '/admin', icon: '🛡️', label: 'Admin', mobile: false }
 
 const LANGS = [
   { code: 'fr', flag: '🇫🇷', label: 'FR' },
@@ -39,7 +39,6 @@ export default function Layout() {
 
   const currentLang = LANGS.find(l => l.code === lang) || LANGS[0]
 
-  // Fermer dropdowns au clic extérieur
   useEffect(() => {
     const handler = (e) => {
       if (!langRef.current?.contains(e.target)) setShowLang(false)
@@ -64,7 +63,7 @@ export default function Layout() {
 
   return (
     <div className={`app-grid${sidebarOpen ? ' sidebar-open' : ''}`}>
-      {/* ── TOPBAR ─────────────────────────────────────── */}
+      {/* TOPBAR */}
       <header className="topbar">
         <button className="topbar-btn" onClick={toggleSidebar} title="Menu" style={{ marginRight: 4 }}>
           ☰
@@ -92,7 +91,7 @@ export default function Layout() {
           </div>
 
           {/* Langue */}
-          <div ref={langRef} style={{ position: 'relative' }}>
+          <div ref={langRef} style={{ position: 'relative' }} className="topbar-lang-btn">
             <button
               className="topbar-btn"
               onClick={() => setShowLang(v => !v)}
@@ -153,7 +152,7 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* ── SIDEBAR ────────────────────────────────────── */}
+      {/* SIDEBAR */}
       <nav className="sidebar">
         <div className="sidebar-nav">
           {navItems.map(item => (
@@ -161,7 +160,9 @@ export default function Layout() {
               key={item.path}
               to={item.path}
               end={item.path === '/'}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              className={({ isActive }) =>
+                `nav-item${isActive ? ' active' : ''}${item.mobile === false ? ' nav-desktop-only' : ''}`
+              }
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
@@ -178,7 +179,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      {/* ── MAIN ───────────────────────────────────────── */}
+      {/* MAIN */}
       <main className="main-content">
         <Outlet />
       </main>
