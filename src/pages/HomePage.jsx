@@ -1,9 +1,37 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useChannels, useChannelStats, useFeaturedChannels, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
+import { useChannels, useChannelStats, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
 
 const CATEGORIES = ['news', 'sports', 'music', 'movies', 'entertainment', 'documentary', 'kids', 'business', 'culture']
+
+const FEATURED_COUNTRIES = [
+  { code: 'FR', name: 'France',        color: '#003189' },
+  { code: 'MA', name: 'Maroc',         color: '#c1272d' },
+  { code: 'DZ', name: 'Algérie',       color: '#006233' },
+  { code: 'TN', name: 'Tunisie',       color: '#e70013' },
+  { code: 'US', name: 'USA',           color: '#3c3b6e' },
+  { code: 'GB', name: 'UK',            color: '#012169' },
+  { code: 'SA', name: 'Arabie Saoudite', color: '#006c35' },
+  { code: 'TR', name: 'Turquie',       color: '#e30a17' },
+  { code: 'ES', name: 'Espagne',       color: '#aa151b' },
+  { code: 'DE', name: 'Allemagne',     color: '#000000' },
+  { code: 'IT', name: 'Italie',        color: '#008c45' },
+  { code: 'BR', name: 'Brésil',        color: '#009c3b' },
+  { code: 'EG', name: 'Égypte',        color: '#ce1126' },
+  { code: 'SN', name: 'Sénégal',       color: '#00853f' },
+  { code: 'CI', name: "Côte d'Ivoire", color: '#f77f00' },
+  { code: 'CM', name: 'Cameroun',      color: '#007a5e' },
+]
+
+function CountryCard({ country, onClick }) {
+  return (
+    <div className="country-card" onClick={onClick} style={{ '--country-color': country.color }}>
+      <div className="country-card-flag">{COUNTRY_FLAG[country.code] || '🌍'}</div>
+      <div className="country-card-name">{country.name}</div>
+    </div>
+  )
+}
 
 function ChannelCard({ channel, onClick }) {
   return (
@@ -30,10 +58,10 @@ function ChannelCard({ channel, onClick }) {
 
 function StatCard({ icon, value, label }) {
   return (
-    <div className="card" style={{ padding: '20px 24px', textAlign: 'center' }}>
-      <div style={{ fontSize: '2rem', marginBottom: 4 }}>{icon}</div>
-      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)' }}>{value}</div>
-      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+    <div className="stat-card">
+      <div className="stat-card-icon">{icon}</div>
+      <div className="stat-card-value">{value}</div>
+      <div className="stat-card-label">{label}</div>
     </div>
   )
 }
@@ -47,7 +75,6 @@ export default function HomePage() {
   const { data: featured } = useChannels({ featured: 'true', limit: 12 })
 
   const trendingChannels = trending?.data || []
-  const featuredChannels = featured?.data || []
 
   const openChannel = (channel) => {
     setCurrentChannel(channel)
@@ -55,45 +82,55 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ paddingBottom: 32 }}>
+    <div className="home-page">
+
       {/* Hero */}
-      <div style={{
-        padding: '32px 24px',
-        background: 'linear-gradient(135deg, rgba(108,99,255,0.1) 0%, transparent 60%)',
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>
-          Bonjour, {user?.name?.split(' ')[0] || 'Viewer'} 👋
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 16 }}>
-          {statsData?.total?.toLocaleString() || '10 000'}+ chaînes du monde entier en direct
-        </p>
-        <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => navigate('/live')}>
-            📡 Regarder maintenant
-          </button>
-          <button className="btn btn-secondary" onClick={() => navigate('/epg')}>
-            📅 Programme TV
-          </button>
-          <button className="btn btn-secondary" onClick={() => navigate('/search')}>
-            🔍 Rechercher
-          </button>
+      <div className="home-hero">
+        <div className="home-hero-content">
+          <h1 className="home-hero-title">
+            Bonjour, {user?.name?.split(' ')[0] || 'Viewer'} 👋
+          </h1>
+          <p className="home-hero-sub">
+            {statsData?.total?.toLocaleString() || '10 000'}+ chaînes du monde entier
+          </p>
+          <div className="home-hero-actions">
+            <button className="btn btn-primary" onClick={() => navigate('/live')}>
+              📡 Regarder maintenant
+            </button>
+            <button className="btn btn-secondary" onClick={() => navigate('/epg')}>
+              📅 Programme TV
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ padding: '16px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+      <div className="stats-grid">
         <StatCard icon="📺" value={statsData?.total?.toLocaleString() || '10K+'} label="Chaînes" />
         <StatCard icon="🔴" value={statsData?.withStream?.toLocaleString() || '7.5K+'} label="En direct" />
         <StatCard icon="🌍" value={statsData?.countries || '180+'} label="Pays" />
         <StatCard icon="🗂️" value={statsData?.categories || '20+'} label="Catégories" />
       </div>
 
-      {/* Catégories */}
-      <div className="section-header" style={{ paddingTop: 24 }}>
-        <div>
-          <div className="section-title">Explorer par catégorie</div>
+      {/* Par pays featured */}
+      <div className="countries-section">
+        <div className="section-header">
+          <div>
+            <div className="section-title">🌍 Chaînes par pays</div>
+            <div className="section-subtitle">Explorez les chaînes de votre pays</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/live')}>Voir tout →</button>
         </div>
+        <div className="countries-scroll">
+          {FEATURED_COUNTRIES.map(c => (
+            <CountryCard key={c.code} country={c} onClick={() => navigate(`/live?country=${c.code}`)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="section-header" style={{ paddingTop: 8 }}>
+        <div className="section-title">🗂️ Explorer par catégorie</div>
       </div>
       <div className="filter-row">
         {CATEGORIES.map(cat => (
@@ -121,11 +158,11 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Quick access */}
+      {/* Acces rapide */}
       <div className="section-header" style={{ paddingTop: 8 }}>
         <div className="section-title">⚡ Accès rapide</div>
       </div>
-      <div style={{ padding: '0 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+      <div className="quick-access-grid">
         {[
           { icon: '📰', label: 'Infos & Actualités', color: '#3b82f6', path: '/live?category=news' },
           { icon: '⚽', label: 'Sport', color: '#22d16a', path: '/live?category=sports' },
@@ -134,30 +171,14 @@ export default function HomePage() {
           { icon: '📅', label: 'Programme TV', color: 'var(--accent)', path: '/epg' },
           { icon: '📂', label: 'Ma Playlist M3U', color: '#8b5cf6', path: '/playlists' },
         ].map(item => (
-          <div key={item.path} className="card" onClick={() => navigate(item.path)}
-            style={{ padding: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '1.8rem' }}>{item.icon}</span>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</span>
+          <div key={item.path} className="quick-access-card" onClick={() => navigate(item.path)}
+            style={{ '--qa-color': item.color }}>
+            <span className="quick-access-icon">{item.icon}</span>
+            <span className="quick-access-label">{item.label}</span>
           </div>
         ))}
       </div>
 
-      {/* Pays populaires */}
-      <div className="section-header" style={{ paddingTop: 16 }}>
-        <div className="section-title">🌍 Par pays</div>
-      </div>
-      <div className="filter-row">
-        {[
-          { code: 'FR', name: 'France' }, { code: 'US', name: 'USA' }, { code: 'GB', name: 'UK' },
-          { code: 'DE', name: 'Allemagne' }, { code: 'ES', name: 'Espagne' }, { code: 'IT', name: 'Italie' },
-          { code: 'MA', name: 'Maroc' }, { code: 'DZ', name: 'Algérie' }, { code: 'TN', name: 'Tunisie' },
-          { code: 'TR', name: 'Turquie' }, { code: 'SA', name: 'Arabie' }, { code: 'BR', name: 'Brésil' },
-        ].map(c => (
-          <div key={c.code} className="filter-chip" onClick={() => navigate(`/live?country=${c.code}`)}>
-            {COUNTRY_FLAG[c.code]} {c.name}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
