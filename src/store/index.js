@@ -37,7 +37,7 @@ export const useAuthStore = create(
     }),
     {
       name: 'nkiptv-auth',
-      partialState: (s) => ({
+      partialize: (s) => ({
         user: s.user, accessToken: s.accessToken,
         refreshToken: s.refreshToken, activeProfileId: s.activeProfileId,
       }),
@@ -66,7 +66,7 @@ export const useUIStore = create(
       setMuted: (muted) => set({ muted }),
       setFullscreen: (fullscreen) => set({ fullscreen }),
     }),
-    { name: 'nkiptv-ui', partialState: (s) => ({ sidebarOpen: s.sidebarOpen, lang: s.lang, theme: s.theme, volume: s.volume }) }
+    { name: 'nkiptv-ui', partialize: (s) => ({ sidebarOpen: s.sidebarOpen, lang: s.lang, theme: s.theme, volume: s.volume }) }
   )
 )
 
