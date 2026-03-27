@@ -21,8 +21,5 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
-  ],
-  "env": {
-    "VITE_API_URL": "@nkiptv_api_url"
-  }
+  ]
 }
