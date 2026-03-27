@@ -4,6 +4,16 @@ import { authAPI } from '../services/api'
 export const useAuth = () => {
   const store = useAuthStore()
 
+  // Compute derived auth state directly from raw fields (no stale getters)
+  const isAuth = !!store.accessToken && store.accessToken !== 'demo'
+  const isDemo = store.accessToken === 'demo'
+  const isAdmin = store.user?.role === 'admin'
+  const isPremium = store.user?.role === 'admin' || ['premium', 'pro'].includes(store.user?.plan?.type)
+  const activeProfile = (() => {
+    if (!store.user?.profiles?.length) return null
+    return store.user.profiles.find(p => p._id === store.activeProfileId) || store.user.profiles[0]
+  })()
+
   const login = async (email, password) => {
     const { data } = await authAPI.login(email, password)
     store.login(data.data.user, data.data.accessToken, data.data.refreshToken)
@@ -26,7 +36,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      if (!store.isDemo) await authAPI.logout(store.refreshToken)
+      if (store.accessToken !== 'demo') await authAPI.logout(store.refreshToken)
     } catch { /* ignore */ }
     store.logout()
   }
@@ -41,11 +51,11 @@ export const useAuth = () => {
 
   return {
     user: store.user,
-    isAuth: store.isAuth || !!store.accessToken,
-    isDemo: store.isDemo,
-    isAdmin: store.isAdmin,
-    isPremium: store.isPremium,
-    activeProfile: store.activeProfile,
+    isAuth,
+    isDemo,
+    isAdmin,
+    isPremium,
+    activeProfile,
     login,
     register,
     loginDemo,
