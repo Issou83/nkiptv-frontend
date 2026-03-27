@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
+import { useAuthStore } from './store'
 import Layout from './components/layout/Layout'
 import Splash from './components/ui/Splash'
 import AuthPage from './pages/AuthPage'
@@ -29,6 +30,8 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { isAuth, isAdmin } = useAuth()
+  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true
+  if (!hasHydrated) return null
   if (!isAuth) return <Navigate to="/login" replace />
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />
   return children
