@@ -1,5 +1,5 @@
-// v2.1 - fix session persistence
-import React, { Suspense, lazy, useEffect } from 'react'
+// v2.2 - fix hydration guard (reactive)
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import { useAuthStore } from './store'
@@ -8,38 +8,49 @@ import Splash from './components/ui/Splash'
 import AuthPage from './pages/AuthPage'
 
 // Lazy loading des pages (code splitting)
-const HomePage     = lazy(() => import('./pages/HomePage'))
-const LivePage     = lazy(() => import('./pages/LivePage'))
-const PlayerPage   = lazy(() => import('./pages/PlayerPage'))
+const HomePage      = lazy(() => import('./pages/HomePage'))
+const LivePage      = lazy(() => import('./pages/LivePage'))
+const PlayerPage    = lazy(() => import('./pages/PlayerPage'))
 const FavoritesPage = lazy(() => import('./pages/FavoritesPage'))
-const SearchPage   = lazy(() => import('./pages/SearchPage'))
-const EpgPage      = lazy(() => import('./pages/EpgPage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const PricingPage  = lazy(() => import('./pages/PricingPage'))
+const SearchPage    = lazy(() => import('./pages/SearchPage'))
+const EpgPage       = lazy(() => import('./pages/EpgPage'))
+const SettingsPage  = lazy(() => import('./pages/SettingsPage'))
+const PricingPage   = lazy(() => import('./pages/PricingPage'))
 const PlaylistsPage = lazy(() => import('./pages/PlaylistsPage'))
-const ProfilesPage = lazy(() => import('./pages/ProfilesPage'))
-const AdminPage    = lazy(() => import('./pages/AdminPage'))
-const NotFound     = lazy(() => import('./pages/NotFound'))
+const ProfilesPage  = lazy(() => import('./pages/ProfilesPage'))
+const AdminPage     = lazy(() => import('./pages/AdminPage'))
+const NotFound      = lazy(() => import('./pages/NotFound'))
 
 const PageLoader = () => (
-  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', minHeight:'300px' }}>
-    <div className="splash-loader">
-      <span/><span/><span/>
-    </div>
+  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>
+    <div className="splash-loader"><span/><span/><span/></div>
   </div>
 )
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { isAuth, isAdmin } = useAuth()
-  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true
-  if (!hasHydrated) return null
+
+  // Reactive hydration: listen to onHydrationFinished so component re-renders
+  const [hydrated, setHydrated] = useState(
+    () => useAuthStore.persist?.hasHydrated?.() ?? true
+  )
+  useEffect(() => {
+    if (hydrated) return
+    // If not yet hydrated, subscribe to completion event
+    const unsub = useAuthStore.persist?.onHydrationFinished?.(() => setHydrated(true))
+    // Fallback: if persist API unavailable, assume hydrated
+    if (typeof unsub === 'undefined') setHydrated(true)
+    return unsub
+  }, [hydrated])
+
+  if (!hydrated) return <PageLoader />
   if (!isAuth) return <Navigate to="/login" replace />
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />
   return children
 }
 
 export default function App() {
-  const [showSplash, setShowSplash] = React.useState(true)
+  const [showSplash, setShowSplash] = useState(true)
   const { isAuth } = useAuth()
 
   useEffect(() => {
