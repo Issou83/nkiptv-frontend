@@ -3,6 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useChannels, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
 
+// Ne pas autofocus sur touch pour éviter l'ouverture immédiate du clavier
+const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+
 export default function SearchPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -20,7 +23,7 @@ export default function SearchPage() {
     <div style={{ padding: 16 }}>
       <h2 style={{ fontWeight: 800, marginBottom: 16 }}>🔍 Recherche</h2>
       <input className="input" placeholder="Nom de chaîne, pays, catégorie…"
-        value={q} autoFocus
+        value={q} autoFocus={!isTouch}
         onChange={e => setQ(e.target.value)}
         style={{ marginBottom: 20 }} />
 
