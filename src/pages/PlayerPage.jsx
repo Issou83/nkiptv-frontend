@@ -144,12 +144,12 @@ export default function PlayerPage() {
           </div>
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-secondary'}`} onClick={toggleFav}>
               {isFav ? '⭐' : '☆'} Favori
             </button>
             <button className="btn btn-secondary btn-sm" onClick={() => setShowEpg(v => !v)}>
-              📅 Programme
+              📅 EPG
             </button>
             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/live')}>
               📡 Changer
