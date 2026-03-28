@@ -77,7 +77,7 @@ export default function LivePage() {
           {['grid', 'list'].map(v => (
             <button key={v} onClick={() => setView(v)}
               className={`btn btn-secondary btn-sm${view === v ? ' btn-primary' : ''}`}
-              style={{ padding: '6px 10px', fontSize: 16 }}>
+              style={{ fontSize: 16, minWidth: 40 }}>
               {v === 'grid' ? '▦' : '≡'}
             </button>
           ))}
