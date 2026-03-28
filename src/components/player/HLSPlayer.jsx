@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 import { useUIStore } from '../../store'
 
+// Detect touch device for UI adaptation
+const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+
 const MAX_RETRIES = 3
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
@@ -340,7 +343,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     <div
       ref={containerRef}
       className={`player-container${isFullscreen ? ' fullscreen' : ''}`}
-      style={{ width: '100%', aspectRatio: '16/9', maxHeight: 'calc(100vh - 160px)', background: '#000' }}
+      style={{ width: '100%', aspectRatio: '16/9', maxHeight: 'calc(100vh - 160px)', background: '#000', touchAction: 'manipulation' }}
       onMouseMove={showControlsTemp}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
@@ -417,29 +420,32 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           <div className="player-controls">
             <button
               onClick={togglePlay}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
             >
               {status === 'playing' ? '⏸' : '▶'}
             </button>
 
             <button
               onClick={toggleMute}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
             >
               {effectiveMuted ? '🔇' : volume > 50 ? '🔊' : '🔉'}
             </button>
 
-            <input
-              type="range" min="0" max="100" value={effectiveMuted ? 0 : volume}
-              onChange={e => { setVolume(Number(e.target.value)); if (effectiveMuted) { setMuted(false); setIsMuted(false) } }}
-              style={{ width: 80, accentColor: 'var(--accent)', cursor: 'pointer' }}
-            />
+            {/* Volume slider — hidden on touch devices to save space */}
+            {!isTouchDevice && (
+              <input
+                type="range" min="0" max="100" value={effectiveMuted ? 0 : volume}
+                onChange={e => { setVolume(Number(e.target.value)); if (effectiveMuted) { setMuted(false); setIsMuted(false) } }}
+                style={{ width: 80, accentColor: 'var(--accent)', cursor: 'pointer' }}
+              />
+            )}
 
             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', flex: 1, textAlign: 'center' }}>
               {formatTime(currentTime)}
             </span>
 
-            {levels.length > 1 && (
+            {levels.length > 1 && !isTouchDevice && (
               <select
                 style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', fontSize: 12, padding: '3px 6px', cursor: 'pointer' }}
                 onChange={e => { if (hlsRef.current) hlsRef.current.currentLevel = parseInt(e.target.value) }}
