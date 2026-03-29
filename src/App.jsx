@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import { useAuthStore } from './store'
@@ -30,11 +30,8 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { isAdmin } = useAuth()
-  // On lit directement accessToken du store — résiste à la perte des getters après persist
-  const accessToken  = useAuthStore(s => s.accessToken)
-  const hasHydrated  = useAuthStore.persist?.hasHydrated?.() ?? true
-  if (!hasHydrated) return null
-  // Autorise les sessions réelles ET les sessions demo (accessToken === 'demo')
+  // Lecture directe du store — localStorage hydration is synchronous, no need to wait
+  const accessToken = useAuthStore(s => s.accessToken)
   if (!accessToken) return <Navigate to="/login" replace />
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />
   return children
