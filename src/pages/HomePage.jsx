@@ -8,7 +8,7 @@ const CATEGORIES = ['news', 'sports', 'music', 'movies', 'entertainment', 'docum
 const FEATURED_COUNTRIES = [
   { code: 'FR', name: 'France',          color: '#003189' },
   { code: 'MA', name: 'Maroc',           color: '#c1272d' },
-  { code: 'DZ', name: 'AlgÃ©rie',         color: '#006233' },
+  { code: 'DZ', name: 'Algérie',         color: '#006233' },
   { code: 'TN', name: 'Tunisie',         color: '#e70013' },
   { code: 'US', name: 'USA',             color: '#3c3b6e' },
   { code: 'GB', name: 'UK',              color: '#012169' },
@@ -17,17 +17,17 @@ const FEATURED_COUNTRIES = [
   { code: 'ES', name: 'Espagne',         color: '#aa151b' },
   { code: 'DE', name: 'Allemagne',       color: '#dd0000' },
   { code: 'IT', name: 'Italie',          color: '#008c45' },
-  { code: 'BR', name: 'BrÃ©sil',          color: '#009c3b' },
-  { code: 'EG', name: 'Ãgypte',          color: '#ce1126' },
-  { code: 'SN', name: 'SÃ©nÃ©gal',         color: '#00853f' },
-  { code: 'CI', name: "CÃ´te d'Ivoire",   color: '#f77f00' },
+  { code: 'BR', name: 'Brésil',          color: '#009c3b' },
+  { code: 'EG', name: 'Égypte',          color: '#ce1126' },
+  { code: 'SN', name: 'Sénégal',         color: '#00853f' },
+  { code: 'CI', name: "Côte d'Ivoire",   color: '#f77f00' },
   { code: 'CM', name: 'Cameroun',        color: '#007a5e' },
 ]
 
 function CountryCard({ country, onClick }) {
   return (
     <div className="country-card" onClick={onClick} style={{ '--country-color': country.color }}>
-      <div className="country-card-flag">{COUNTRY_FLAG[country.code] || 'ð'}</div>
+      <div className="country-card-flag">{COUNTRY_FLAG[country.code] || '🌍'}</div>
       <div className="country-card-name">{country.name}</div>
     </div>
   )
@@ -39,7 +39,7 @@ function ChannelCard({ channel, onClick, showBadge = true }) {
       <div className="channel-card-logo">
         {channel.logo
           ? <img src={channel.logo} alt={channel.name} onError={e => e.target.style.display = 'none'} />
-          : <span className="logo-fallback">{CATEGORY_EMOJI[channel.categories?.[0]] || 'ðº'}</span>
+          : <span className="logo-fallback">{CATEGORY_EMOJI[channel.categories?.[0]] || '📺'}</span>
         }
         {showBadge && channel.streams?.length > 0 && (
           <span style={{ position: 'absolute', top: 6, right: 6 }} className="badge badge-success">LIVE</span>
@@ -48,8 +48,8 @@ function ChannelCard({ channel, onClick, showBadge = true }) {
       <div className="channel-card-info">
         <div className="channel-card-name">{channel.name}</div>
         <div className="channel-card-meta">
-          <span>{COUNTRY_FLAG[channel.country] || 'ð'} {channel.country}</span>
-          {channel.categories?.[0] && <span>Â· {CATEGORY_EMOJI[channel.categories[0]]} {channel.categories[0]}</span>}
+          <span>{COUNTRY_FLAG[channel.country] || '🌐'} {channel.country}</span>
+          {channel.categories?.[0] && <span>· {CATEGORY_EMOJI[channel.categories[0]]} {channel.categories[0]}</span>}
         </div>
       </div>
     </div>
@@ -85,53 +85,53 @@ export default function HomePage() {
     const h = new Date().getHours()
     if (h < 6) return 'Bonne nuit'
     if (h < 12) return 'Bonjour'
-    if (h < 18) return 'Bon aprÃ¨s-midi'
+    if (h < 18) return 'Bon après-midi'
     return 'Bonsoir'
   }
 
   return (
     <div className="home-page">
 
-      {/* ââ Hero âââââââââââââââââââââââââââââââââââââââ */}
+      {/* ── Hero ─────────────────────────────────────── */}
       <div className="home-hero">
         <div className="home-hero-content">
           <h1 className="home-hero-title">
-            {getGreeting()}, {user?.name?.split(' ')[0] || 'Viewer'} ð
+            {getGreeting()}, {user?.name?.split(' ')[0] || 'Viewer'} 👋
           </h1>
           <p className="home-hero-sub">
-            {statsData?.total?.toLocaleString() || '10 000'}+ chaÃ®nes du monde entier Â· {statsData?.countries || '180'}+ pays
+            {statsData?.total?.toLocaleString() || '10 000'}+ chaînes du monde entier · {statsData?.countries || '180'}+ pays
           </p>
           <div className="home-hero-actions">
             <button className="btn btn-primary" onClick={() => navigate('/live')}>
-              ð¡ Regarder maintenant
+              📡 Regarder maintenant
             </button>
             <button className="btn btn-secondary" onClick={() => navigate('/epg')}>
-              ð Programme TV
+              📅 Programme TV
             </button>
             <button className="btn btn-secondary" onClick={() => navigate('/search')}>
-              ð Rechercher
+              🔍 Rechercher
             </button>
           </div>
         </div>
       </div>
 
-      {/* ââ Stats ââââââââââââââââââââââââââââââââââââââ */}
+      {/* ── Stats ────────────────────────────────────── */}
       <div className="stats-grid">
-        <StatCard icon="ðº" value={statsData?.total?.toLocaleString() || '10K+'} label="ChaÃ®nes" color="#6c63ff" />
-        <StatCard icon="ð´" value={statsData?.withStream?.toLocaleString() || '7.5K+'} label="En direct" color="#e8251a" />
-        <StatCard icon="ð" value={statsData?.countries || '180+'} label="Pays" color="#22d16a" />
-        <StatCard icon="ðï¸" value={statsData?.categories || '20+'} label="CatÃ©gories" color="#f59e0b" />
+        <StatCard icon="📺" value={statsData?.total?.toLocaleString() || '10K+'} label="Chaînes" color="#6c63ff" />
+        <StatCard icon="🔴" value={statsData?.withStream?.toLocaleString() || '7.5K+'} label="En direct" color="#e8251a" />
+        <StatCard icon="🌍" value={statsData?.countries || '180+'} label="Pays" color="#22d16a" />
+        <StatCard icon="🗂️" value={statsData?.categories || '20+'} label="Catégories" color="#f59e0b" />
       </div>
 
-      {/* ââ RÃ©cemment regardÃ© âââââââââââââââââââââââââââ */}
+      {/* ── Récemment regardé ─────────────────────────── */}
       {recentChannels.length > 0 && (
         <>
           <div className="section-header">
             <div>
-              <div className="section-title">ð RÃ©cemment regardÃ©</div>
-              <div className="section-subtitle">Reprenez lÃ  oÃ¹ vous vous Ã©tiez arrÃªtÃ©</div>
+              <div className="section-title">🕐 Récemment regardé</div>
+              <div className="section-subtitle">Reprenez là où vous vous étiez arrêté</div>
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/favorites')}>Voir tout â</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/favorites')}>Voir tout →</button>
           </div>
           <div className="channel-grid channel-grid-lg" style={{ paddingTop: 0 }}>
             {recentChannels.slice(0, 6).map(ch => (
@@ -139,16 +139,16 @@ export default function HomePage() {
                 <div className="channel-card-logo">
                   {ch.logo
                     ? <img src={ch.logo} alt={ch.name} onError={e => e.target.style.display = 'none'} />
-                    : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || 'ðº'}</span>
+                    : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                   <span style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', borderRadius: 6, padding: '2px 6px', fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>
-                    â¶ Continuer
+                    ▶ Continuer
                   </span>
                 </div>
                 <div className="channel-card-info">
                   <div className="channel-card-name">{ch.name}</div>
                   <div className="channel-card-meta">
-                    <span>{COUNTRY_FLAG[ch.country] || 'ð'}</span>
+                    <span>{COUNTRY_FLAG[ch.country] || '🌐'}</span>
                     {ch.categories?.[0] && <span>{CATEGORY_EMOJI[ch.categories[0]]} {ch.categories[0]}</span>}
                   </div>
                 </div>
@@ -158,15 +158,15 @@ export default function HomePage() {
         </>
       )}
 
-      {/* ââ Par pays (section vedette) ââââââââââââââââââ */}
+      {/* ── Par pays (section vedette) ────────────────── */}
       <div className="countries-section">
         <div className="countries-section-bg" />
         <div className="section-header">
           <div>
-            <div className="section-title">ð ChaÃ®nes par pays</div>
-            <div className="section-subtitle">Explorez les chaÃ®nes de votre pays</div>
+            <div className="section-title">🌍 Chaînes par pays</div>
+            <div className="section-subtitle">Explorez les chaînes de votre pays</div>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/live')}>Voir tout â</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/live')}>Voir tout →</button>
         </div>
         <div className="countries-scroll">
           {FEATURED_COUNTRIES.map(c => (
@@ -175,9 +175,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ââ CatÃ©gories âââââââââââââââââââââââââââââââââ */}
+      {/* ── Catégories ───────────────────────────────── */}
       <div className="section-header" style={{ paddingTop: 8 }}>
-        <div className="section-title">ðï¸ Explorer par catÃ©gorie</div>
+        <div className="section-title">🗂️ Explorer par catégorie</div>
       </div>
       <div className="filter-row">
         {CATEGORIES.map(cat => (
@@ -187,15 +187,15 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* ââ Tendances ââââââââââââââââââââââââââââââââââ */}
+      {/* ── Tendances ────────────────────────────────── */}
       {trendingChannels.length > 0 && (
         <>
           <div className="section-header">
             <div>
-              <div className="section-title">ð¥ Tendances</div>
-              <div className="section-subtitle">Les chaÃ®nes les plus regardÃ©es</div>
+              <div className="section-title">🔥 Tendances</div>
+              <div className="section-subtitle">Les chaînes les plus regardées</div>
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/live?sort=viewCount')}>Voir tout â</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/live?sort=viewCount')}>Voir tout →</button>
           </div>
           <div className="channel-grid channel-grid-lg" style={{ paddingTop: 0 }}>
             {trendingChannels.slice(0, 8).map(ch => (
@@ -205,20 +205,20 @@ export default function HomePage() {
         </>
       )}
 
-      {/* ââ AccÃ¨s rapide âââââââââââââââââââââââââââââââ */}
+      {/* ── Accès rapide ─────────────────────────────── */}
       <div className="section-header" style={{ paddingTop: 8 }}>
-        <div className="section-title">â¡ AccÃ¨s rapide</div>
+        <div className="section-title">⚡ Accès rapide</div>
       </div>
       <div className="quick-access-grid">
         {[
-          { icon: 'ð°', label: 'Infos & ActualitÃ©s', color: '#3b82f6',      path: '/live?category=news' },
-          { icon: 'â½', label: 'Sport',              color: '#22d16a',      path: '/live?category=sports' },
-          { icon: 'ðµ', label: 'Musique',            color: '#f59e0b',      path: '/live?category=music' },
-          { icon: 'ð¬', label: 'CinÃ©ma',             color: '#ec4899',      path: '/live?category=movies' },
-          { icon: 'ð', label: 'Programme TV',       color: 'var(--accent)', path: '/epg' },
-          { icon: 'ð', label: 'Ma Playlist M3U',    color: '#8b5cf6',      path: '/playlists' },
-          { icon: 'â­', label: 'Mes Favoris',        color: '#f59e0b',      path: '/favorites' },
-          { icon: 'ð§¸', label: 'Enfants',            color: '#22d16a',      path: '/live?category=kids' },
+          { icon: '📰', label: 'Infos & Actualités', color: '#3b82f6',      path: '/live?category=news' },
+          { icon: '⚽', label: 'Sport',              color: '#22d16a',      path: '/live?category=sports' },
+          { icon: '🎵', label: 'Musique',            color: '#f59e0b',      path: '/live?category=music' },
+          { icon: '🎬', label: 'Cinéma',             color: '#ec4899',      path: '/live?category=movies' },
+          { icon: '📅', label: 'Programme TV',       color: 'var(--accent)', path: '/epg' },
+          { icon: '📂', label: 'Ma Playlist M3U',    color: '#8b5cf6',      path: '/playlists' },
+          { icon: '⭐', label: 'Mes Favoris',        color: '#f59e0b',      path: '/favorites' },
+          { icon: '🧸', label: 'Enfants',            color: '#22d16a',      path: '/live?category=kids' },
         ].map(item => (
           <div key={item.path} className="quick-access-card" onClick={() => navigate(item.path)}
             style={{ '--qa-color': item.color }}>
