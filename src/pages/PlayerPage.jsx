@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUIStore } from '../store'
 import { useQuery } from '@tanstack/react-query'
@@ -12,12 +12,14 @@ import { fr } from 'date-fns/locale'
 export default function PlayerPage() {
   const { channelId } = useParams()
   const navigate = useNavigate()
-  const { currentChannel, setCurrentChannel } = useUIStore()
+  const { currentChannel, setCurrentChannel, watchHistory } = useUIStore()
   const toast = useToast()
   const [isFav, setIsFav] = useState(false)
   const [showEpg, setShowEpg] = useState(false)
+  const [streamIndex, setStreamIndex] = useState(0)
+  const [showSidebar, setShowSidebar] = useState(false)
 
-  // Charger la chaîne si accès direct via URL
+  // Charger la chaÃ®ne si accÃ¨s direct via URL
   const { data: channelData } = useQuery({
     queryKey: ['channel', channelId],
     queryFn: async () => {
@@ -45,76 +47,117 @@ export default function PlayerPage() {
     if (channelData && !currentChannel) setCurrentChannel(channelData)
   }, [channelData])
 
+  // Reset stream index when channel changes
+  useEffect(() => {
+    setStreamIndex(0)
+  }, [channel?.id])
+
   const toggleFav = async () => {
     if (!channel) return
     try {
       if (isFav) {
         await favoritesAPI.remove(channel.id)
         setIsFav(false)
-        toast.info('Retiré des favoris')
+        toast.info('RetirÃ© des favoris')
       } else {
         await favoritesAPI.add(channel.id)
         setIsFav(true)
-        toast.success('Ajouté aux favoris ⭐')
+        toast.success('AjoutÃ© aux favoris â­')
       }
     } catch {
-      toast.error('Connectez-vous pour gérer vos favoris')
+      toast.error('Connectez-vous pour gÃ©rer vos favoris')
+    }
+  }
+
+  const handleError = useCallback((msg) => {
+    const streams = channel?.streams || []
+    if (streamIndex < streams.length - 1) {
+      toast.info(`â¡ Tentative avec le flux suivantâ¦ (${streamIndex + 1}/${streams.length})`)
+      setStreamIndex(i => i + 1)
+    } else {
+      toast.error(`Erreur stream : ${msg}`)
+    }
+  }, [channel, streamIndex, toast])
+
+  const handlePiP = async () => {
+    try {
+      const video = document.querySelector('.player-video')
+      if (!video) return
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+      } else if (video.requestPictureInPicture) {
+        await video.requestPictureInPicture()
+        toast.info('Mode PiP activÃ©')
+      } else {
+        toast.info('PiP non supportÃ© par ce navigateur')
+      }
+    } catch (e) {
+      toast.error('PiP indisponible')
     }
   }
 
   if (!channel) {
     return (
       <div className="empty-state">
-        <div className="empty-state-icon">📺</div>
-        <div className="empty-state-title">Aucune chaîne sélectionnée</div>
-        <div className="empty-state-text">Choisissez une chaîne dans Live TV</div>
+        <div className="empty-state-icon">ðº</div>
+        <div className="empty-state-title">Aucune chaÃ®ne sÃ©lectionnÃ©e</div>
+        <div className="empty-state-text">Choisissez une chaÃ®ne dans Live TV</div>
         <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => navigate('/live')}>
-          📡 Parcourir les chaînes
+          ð¡ Parcourir les chaÃ®nes
         </button>
       </div>
     )
   }
 
-  const streamUrl = channel.streams?.[0]?.url
-    ? proxyAPI.getStreamUrl(channel.streams[0].url, channel.country)
+  const streams = channel.streams || []
+  const currentStream = streams[streamIndex]
+  const streamUrl = currentStream?.url
+    ? proxyAPI.getStreamUrl(currentStream.url, channel.country)
     : proxyAPI.getBestStreamUrl(channel.id)
 
   const currentProg = epgData?.current
-  const nextProg = epgData?.next
+  const nextProg    = epgData?.next
+
+  // ChaÃ®nes rÃ©centes pour la barre latÃ©rale
+  const recentChannels = (watchHistory || []).filter(h => h.id !== channel.id).slice(0, 8)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {/* Player */}
-      <div style={{ background: '#000', position: 'relative' }}>
+      <div style={{ background: '#000', position: 'relative', flexShrink: 0 }}>
         <HLSPlayer
+          key={`${channel.id}-${streamIndex}`}
           src={streamUrl}
           channelId={channel.id}
           autoplay={true}
-          onError={(msg) => toast.error(`Erreur stream : ${msg}`)}
+          onError={handleError}
         />
       </div>
 
       {/* Channel info */}
-      <div style={{ padding: '16px 20px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           {/* Logo */}
-          <div style={{ width: 56, height: 56, background: 'var(--bg-card)', borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ width: 52, height: 52, background: 'var(--bg-card)', borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border)' }}>
             {channel.logo
-              ? <img src={channel.logo} style={{ width: 44, height: 44, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
-              : <span style={{ fontSize: '1.8rem' }}>{CATEGORY_EMOJI[channel.categories?.[0]] || '📺'}</span>
+              ? <img src={channel.logo} style={{ width: 40, height: 40, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
+              : <span style={{ fontSize: '1.6rem' }}>{CATEGORY_EMOJI[channel.categories?.[0]] || 'ðº'}</span>
             }
           </div>
 
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{channel.name}</h2>
-              <span className="badge badge-danger">🔴 LIVE</span>
-              {channel.streams?.[0]?.quality && (
-                <span className="badge badge-hd">{channel.streams[0].quality}</span>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{channel.name}</h2>
+              <span className="badge badge-danger">ð´ LIVE</span>
+              {currentStream?.quality && <span className="badge badge-hd">{currentStream.quality}</span>}
+              {streams.length > 1 && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Flux {streamIndex + 1}/{streams.length}
+                </span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 10 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <span>{COUNTRY_FLAG[channel.country]} {channel.country}</span>
               {channel.categories?.map(c => (
                 <span key={c}>{CATEGORY_EMOJI[c]} {c}</span>
@@ -125,9 +168,9 @@ export default function PlayerPage() {
             {currentProg && (
               <div className="epg-bar" style={{ marginTop: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <strong>▶ {currentProg.title}</strong>
+                  <strong>â¶ {currentProg.title}</strong>
                   <span style={{ color: 'var(--text-muted)' }}>
-                    {format(new Date(currentProg.start), 'HH:mm', { locale: fr })} –
+                    {format(new Date(currentProg.start), 'HH:mm', { locale: fr })} â
                     {format(new Date(currentProg.stop), 'HH:mm', { locale: fr })}
                   </span>
                 </div>
@@ -135,8 +178,8 @@ export default function PlayerPage() {
                   <div className="epg-progress-fill" style={{ width: `${currentProg.progress || 0}%` }} />
                 </div>
                 {nextProg && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Suivant : {nextProg.title} · {format(new Date(nextProg.start), 'HH:mm', { locale: fr })}
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    Suivant : {nextProg.title} Â· {format(new Date(nextProg.start), 'HH:mm', { locale: fr })}
                   </div>
                 )}
               </div>
@@ -145,23 +188,73 @@ export default function PlayerPage() {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-secondary'}`} onClick={toggleFav}>
-              {isFav ? '⭐' : '☆'} Favori
+            <button className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-secondary'}`} onClick={toggleFav} title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
+              {isFav ? 'â­' : 'â'}
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowEpg(v => !v)}>
-              📅 EPG
+            {document.pictureInPictureEnabled && (
+              <button className="btn btn-secondary btn-sm" onClick={handlePiP} title="Picture in Picture">
+                â§
+              </button>
+            )}
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowEpg(v => !v)} title="Programme TV">
+              ð
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/live')}>
-              📡 Changer
+            {streams.length > 1 && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setStreamIndex(i => (i + 1) % streams.length)}
+                title="Changer de flux"
+              >
+                â³
+              </button>
+            )}
+            {recentChannels.length > 0 && (
+              <button className={`btn btn-sm ${showSidebar ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowSidebar(v => !v)} title="ChaÃ®nes rÃ©centes">
+                ð
+              </button>
+            )}
+            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/live')} title="Changer de chaÃ®ne">
+              ð¡
             </button>
           </div>
         </div>
       </div>
 
-      {/* EPG Panel */}
-      {showEpg && (
-        <EpgPanel channelId={channel.id} />
-      )}
+      {/* Main area with optional sidebar */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* EPG Panel */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {showEpg && <EpgPanel channelId={channel.id} />}
+        </div>
+
+        {/* Recent channels sidebar */}
+        {showSidebar && recentChannels.length > 0 && (
+          <div style={{ width: 200, background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)', overflowY: 'auto', flexShrink: 0 }}>
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+              ð RÃCEMMENT VUS
+            </div>
+            {recentChannels.map(ch => (
+              <div
+                key={ch.id}
+                className="channel-list-item"
+                style={{ padding: '8px 10px', gap: 8 }}
+                onClick={() => { setCurrentChannel(ch); navigate(`/player/${ch.id}`) }}
+              >
+                <div style={{ width: 32, height: 32, background: 'var(--bg-card)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                  {ch.logo
+                    ? <img src={ch.logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
+                    : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || 'ðº'}</span>
+                  }
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{COUNTRY_FLAG[ch.country]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -179,20 +272,24 @@ function EpgPanel({ channelId }) {
   const programs = data || []
 
   return (
-    <div style={{ padding: '16px 20px', background: 'var(--bg-card)', borderTop: '1px solid var(--border)' }}>
-      <h4 style={{ marginBottom: 12 }}>📅 Prochains programmes</h4>
+    <div style={{ padding: '14px 16px', background: 'var(--bg-card)', borderTop: '1px solid var(--border)' }}>
+      <h4 style={{ marginBottom: 12 }}>ð Prochains programmes</h4>
       {programs.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Programme non disponible pour cette chaîne</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Programme non disponible pour cette chaÃ®ne</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {programs.slice(0, 8).map((p, i) => (
             <div key={i} style={{ display: 'flex', gap: 12, fontSize: 13, alignItems: 'flex-start' }}>
-              <span style={{ color: 'var(--accent)', minWidth: 40, fontWeight: 600 }}>
+              <span style={{ color: 'var(--accent)', minWidth: 40, fontWeight: 600, flexShrink: 0 }}>
                 {format(new Date(p.start), 'HH:mm', { locale: fr })}
               </span>
-              <div>
-                <div style={{ fontWeight: 600 }}>{p.title}</div>
-                {p.description && <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{p.description.slice(0, 100)}{p.description.length > 100 ? '…' : ''}</div>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                {p.description && (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.description.slice(0, 120)}
+                  </div>
+                )}
               </div>
             </div>
           ))}
