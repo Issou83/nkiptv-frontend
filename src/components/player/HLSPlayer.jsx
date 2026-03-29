@@ -55,6 +55,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
+      // Stopper explicitement les chargements en cours avant de détruire l'instance.
+      // Sans ça, les XHR axios côté Railway continuent à être traités même après destroy().
+      try { hlsRef.current.stopLoad() } catch (_) {}
+      try { hlsRef.current.detachMedia() } catch (_) {}
       hlsRef.current.destroy()
       hlsRef.current = null
     }
@@ -109,6 +113,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         manifestLoadingMaxRetryTimeout: 64000,
         levelLoadingMaxRetry: 4,
         levelLoadingRetryDelay: 1000,
+        // ── Timeouts explicites (audio track sub-manifests = level loading) ────
+        fragLoadingTimeOut: 20000,
+        manifestLoadingTimeOut: 20000,
+        levelLoadingTimeOut: 20000,      // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
         xhrSetup: (xhr) => {
           xhr.withCredentials = false
@@ -190,12 +198,24 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
         // ── Non-fatal errors: silent recovery ─────────────────────────────────
         if (!data.fatal) {
-          // Pour les erreurs de chargement de fragment répétées, forcer un startLoad
+          // Fragment load errors → forcer un startLoad
           if (
             data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
             data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT
           ) {
             try { hls.startLoad(-1) } catch (_e) {}
+          }
+          // Audio track sub-manifest timeout/error → retry (évite la boucle audioTrackLoadTimeOut)
+          if (
+            data.details === Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
+            data.details === Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR
+          ) {
+            setTimeout(() => {
+              // Utilise hlsRef.current (pas la var locale `hls`) pour éviter les zombies :
+              // si une nouvelle instance a été créée entre-temps, seq guard l'arrête.
+              if (!hlsRef.current || seq !== initSeqRef.current) return
+              try { hlsRef.current.startLoad(-1) } catch (_e) {}
+            }, 2000)
           }
           return
         }
