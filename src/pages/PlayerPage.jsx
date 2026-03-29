@@ -297,7 +297,7 @@ export default function PlayerPage() {
                   {ch.logo
                     ? <img src={ch.logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt=""
                         onError={e => e.target.style.display = 'none'} />
-                    : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}|/span>
+                    : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
