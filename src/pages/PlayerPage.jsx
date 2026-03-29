@@ -111,8 +111,19 @@ export default function PlayerPage() {
 
   const streams = channel.streams || []
   const currentStream = streams[streamIndex]
-  const streamUrl = currentStream?.url
-    ? proxyAPI.getStreamUrl(currentStream.url, channel.country)
+  // Préférer HLS (.m3u8) sur DASH (.mpd) — HLS.js ne supporte pas DASH nativement
+  // Si le stream sélectionné est DASH, cherche une alternative HLS dans la liste ou utilise bestStreamUrl
+  const rawStreamUrl = (() => {
+    const url = currentStream?.url
+    if (!url) return null
+    if (url.endsWith('.mpd') || url.includes('browser-dash')) {
+      const hlsAlt = streams.find(s => s.url?.includes('.m3u8'))
+      return hlsAlt?.url || channel.bestStreamUrl || url
+    }
+    return url
+  })()
+  const streamUrl = rawStreamUrl
+    ? proxyAPI.getStreamUrl(rawStreamUrl, channel.country)
     : proxyAPI.getBestStreamUrl(channel.id)
 
   const currentProg = epgData?.current
