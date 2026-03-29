@@ -1,22 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useUIStore } from '../../store'
 import ToastContainer from '../ui/ToastContainer'
 
 const NAV_ITEMS = [
-  { path: '/',          icon: '🏠', label: 'Accueil',    mobile: true  },
-  { path: '/live',      icon: '📡', label: 'Live TV',    mobile: true,  badge: '10K+' },
-  { path: '/search',    icon: '🔍', label: 'Recherche',  mobile: true  },
-  { path: '/favorites', icon: '⭐', label: 'Favoris',    mobile: true  },
-  { path: '/profiles',  icon: '👥', label: 'Profils',    mobile: true  },
-  { path: '/epg',       icon: '📅', label: 'Programme',  mobile: false },
-  { path: '/player',    icon: '▶',  label: 'Player',     mobile: false },
-  { path: '/playlists', icon: '📂', label: 'Playlists',  mobile: false },
-  { path: '/pricing',   icon: '💎', label: 'Premium',    mobile: false },
-  { path: '/settings',  icon: '⚙️', label: 'Paramètres', mobile: false },
+  { path: '/', icon: '🏠', label: 'Accueil', mobile: true },
+  { path: '/live', icon: '📡', label: 'Live TV', mobile: true, badge: '10K+' },
+  { path: '/search', icon: '🔍', label: 'Recherche', mobile: true },
+  { path: '/favorites', icon: '⭐', label: 'Favoris', mobile: true },
+  { path: '/profiles', icon: '👥', label: 'Profils', mobile: true },
+  { path: '/epg', icon: '📅', label: 'Programme', mobile: false },
+  { path: '/player', icon: '▶', label: 'Player', mobile: false },
+  { path: '/playlists', icon: '📂', label: 'Playlists', mobile: false },
+  { path: '/pricing', icon: '💎', label: 'Premium', mobile: false },
+  { path: '/settings', icon: '⚙️', label: 'Paramètres', mobile: false },
 ]
-
 const ADMIN_NAV = { path: '/admin', icon: '🛡️', label: 'Admin', mobile: false }
 
 const LANGS = [
@@ -29,11 +28,13 @@ const LANGS = [
 
 export default function Layout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout, isAdmin } = useAuth()
   const { sidebarOpen, toggleSidebar, lang, setLang } = useUIStore()
   const [showLang, setShowLang] = useState(false)
   const [showAvatar, setShowAvatar] = useState(false)
   const [searchVal, setSearchVal] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const langRef = useRef(null)
   const avatarRef = useRef(null)
 
@@ -52,6 +53,11 @@ export default function Layout() {
     }
   }, [])
 
+  // Fermer le menu mobile lors d'un changement de route
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
   const handleSearch = (e) => {
     setSearchVal(e.target.value)
     if (e.target.value.trim()) navigate(`/search?q=${encodeURIComponent(e.target.value)}`)
@@ -69,8 +75,13 @@ export default function Layout() {
     <div className={`app-grid${sidebarOpen ? ' sidebar-open' : ''}`}>
       {/* TOPBAR */}
       <header className="topbar">
-        <button className="topbar-btn" onClick={toggleSidebar} title="Menu" style={{ marginRight: 4 }}>
-          ☰
+        <button
+          className="topbar-btn"
+          onClick={() => { toggleSidebar(); setMobileMenuOpen(v => !v) }}
+          title="Menu"
+          style={{ marginRight: 4 }}
+        >
+          {mobileMenuOpen ? '✕' : '☰'}
         </button>
 
         <NavLink to="/" className="topbar-logo">
@@ -96,8 +107,7 @@ export default function Layout() {
 
           {/* Langue */}
           <div ref={langRef} style={{ position: 'relative' }} className="topbar-lang-btn">
-            <button
-              className="topbar-btn"
+            <button className="topbar-btn"
               onClick={() => setShowLang(v => !v)}
               style={{ gap: 4, width: 'auto', padding: '0 10px', fontSize: 13, fontWeight: 600 }}
             >
@@ -106,8 +116,11 @@ export default function Layout() {
             {showLang && (
               <div className="dropdown">
                 {LANGS.map(l => (
-                  <div key={l.code} className={`dropdown-item${l.code === lang ? ' active' : ''}`}
-                    onClick={() => { setLang(l.code); setShowLang(false) }}>
+                  <div
+                    key={l.code}
+                    className={`dropdown-item${l.code === lang ? ' active' : ''}`}
+                    onClick={() => { setLang(l.code); setShowLang(false) }}
+                  >
                     {l.flag} {l.label}
                     {l.code === lang && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>✓</span>}
                   </div>
@@ -142,7 +155,8 @@ export default function Layout() {
                   ⚙️ Paramètres
                 </div>
                 {user?.plan?.type === 'free' && (
-                  <div className="dropdown-item" style={{ color: '#a78bfa' }} onClick={() => { navigate('/pricing'); setShowAvatar(false) }}>
+                  <div className="dropdown-item" style={{ color: '#a78bfa' }}
+                    onClick={() => { navigate('/pricing'); setShowAvatar(false) }}>
                     💎 Passer Premium
                   </div>
                 )}
@@ -156,7 +170,32 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* SIDEBAR */}
+      {/* MENU MOBILE OVERLAY */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <nav className="mobile-menu" onClick={e => e.stopPropagation()}>
+            <div className="mobile-menu-header">
+              <span className="mobile-menu-title">📺 Navigation</span>
+              <button className="topbar-btn" onClick={() => setMobileMenuOpen(false)}>✕</button>
+            </div>
+            {navItems.map(item => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === '/'}
+                className={({ isActive }) => `mobile-menu-item${isActive ? ' active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+      )}
+
+      {/* SIDEBAR (desktop uniquement) */}
       <nav className="sidebar">
         <div className="sidebar-nav">
           {navItems.map(item => (
@@ -165,7 +204,7 @@ export default function Layout() {
               to={item.path}
               end={item.path === '/'}
               className={({ isActive }) =>
-                `nav-item${isActive ? ' active' : ''}${item.mobile === false ? ' nav-desktop-only' : ''}`
+                `nav-item${isActive ? ' active' : ''}`
               }
             >
               <span className="nav-icon">{item.icon}</span>
@@ -174,7 +213,6 @@ export default function Layout() {
             </NavLink>
           ))}
         </div>
-
         <div className="sidebar-footer">
           <div className="nav-item" onClick={toggleSidebar} style={{ cursor: 'pointer' }}>
             <span className="nav-icon">{sidebarOpen ? '◀' : '▶'}</span>
