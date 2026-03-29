@@ -6,6 +6,7 @@ import { useUIStore } from '../../store'
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 const MAX_RETRIES = 3
+const STALL_TIMEOUT_MS = 8000   // 8s sans progrès → stall détecté
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
@@ -13,19 +14,22 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
   const retryCountRef = useRef(0)
   const srcRef = useRef(src)
 
-  const [status, setStatus] = useState('idle')   // idle | loading | playing | paused | error
+  const [status, setStatus] = useState('idle')   // idle | loading | playing | paused | error | stalled
   const [showControls, setShowControls] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [levels, setLevels] = useState([])
   const [isMuted, setIsMuted] = useState(false)   // track UI mute state separately
+  const [stallCount, setStallCount] = useState(0) // nombre de stalls sur ce flux
 
   const containerRef = useRef(null)
   const controlsTimer = useRef(null)
   const mountedRef = useRef(true)    // false after unmount
   const initSeqRef = useRef(0)       // incremented on every initPlayer call; callbacks check this
   const watchdogRef = useRef(null)   // holds watchdog timer so we can cancel it
+  const stallTimerRef = useRef(null) // détecte stall (vidéo bloquée)
+  const lastTimeRef = useRef(0)      // dernière position connue pour détecter si ça avance
 
   // Granular selectors → HLSPlayer only re-renders when volume/muted change,
   // not when setCurrentChannel or any other unrelated store key is updated.
@@ -128,7 +132,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         }
         onReadyRef.current?.()
 
-        // ── Watchdog ──────────────────────────────────────────────────────────
+        // ── Watchdog ─────────────────────────────────────────────────────────
         // If after 7 s the player is still not in 'playing' state (and there's
         // no user-visible error), try forcing another startLoad.  This covers
         // the case where HLS.js parsed the manifest and even created SourceBuffers
@@ -261,7 +265,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     setIsMuted(false)
   }
 
-  // ── Stall detection ────────────────────────────────────────────
+  // ── Stall detection ──────────────────────────────────────────
+  // Si la vidéo est en état "playing" mais que currentTime ne progresse
+  // plus pendant STALL_TIMEOUT_MS, on tente une récupération automatique.
   const startStallWatch = useCallback((seq) => {
     clearTimeout(stallTimerRef.current)
     stallTimerRef.current = setTimeout(() => {
@@ -270,6 +276,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       if (!video || video.paused) return
       const advanced = video.currentTime > lastTimeRef.current + 0.1
       if (!advanced) {
+        // Stall confirmé — tentative de récupération
         setStatus('loading')
         setStallCount(c => c + 1)
         const hls = hlsRef.current
@@ -277,6 +284,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           try { hls.startLoad(-1) } catch (_) {}
           try { video.play().catch(() => {}) } catch (_) {}
         } else if (video.src) {
+          // Safari native : reload léger
           const t = video.currentTime
           video.load()
           video.currentTime = t
@@ -284,7 +292,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         }
       }
       lastTimeRef.current = video.currentTime
-      startStallWatch(seq)
+      startStallWatch(seq) // relance surveillance
     }, STALL_TIMEOUT_MS)
   }, [])
 
@@ -300,7 +308,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       lastTimeRef.current = video.currentTime
       startStallWatch(initSeqRef.current)
     }
-    const onWaiting = () => { if (!video.paused) lastTimeRef.current = video.currentTime }
+    const onWaiting = () => {
+      // "waiting" = le buffer est vide, on surveille de près
+      if (!video.paused) lastTimeRef.current = video.currentTime
+    }
     const onPause = () => clearTimeout(stallTimerRef.current)
     const onEnded = () => clearTimeout(stallTimerRef.current)
 
@@ -402,8 +413,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         style={{ width: '100%', height: '100%', display: 'block', background: '#000' }}
       />
 
-      {/* Loading overlay */}
-      {status === 'loading' && (
+      {/* Loading / stall overlay */}
+      {(status === 'loading') && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', gap: 16 }}>
           <div className="splash-loader"><span /><span /><span /></div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
@@ -422,7 +433,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', gap: 12 }}>
           <span style={{ fontSize: '3rem' }}>📡</span>
           <p style={{ color: '#ff6b6b', fontWeight: 700, fontSize: 16 }}>Stream indisponible</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ce flux n’est peut-être pas disponible dans votre région</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ce flux n'est peut-être pas disponible dans votre région</p>
           <button
             className="btn btn-primary btn-sm"
             onClick={(e) => { e.stopPropagation(); retryCountRef.current = 0; initPlayer(srcRef.current) }}
@@ -510,9 +521,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
             <button
               onClick={toggleFS}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
             >
-              {isFullscreen ? '⊞' : '⛶'}
+              {isFullscreen ? '⊡' : '⛶'}
             </button>
           </div>
         </div>
