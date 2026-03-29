@@ -111,8 +111,8 @@ export default function PlayerPage() {
 
   const streams = channel.streams || []
   const currentStream = streams[streamIndex]
-  // Préférer HLS (.m3u8) sur DASH (.mpd) — HLS.js ne supporte pas DASH nativement
-  // Si le stream sélectionné est DASH, cherche une alternative HLS dans la liste ou utilise bestStreamUrl
+
+  // Préférer HLS (.m3u8) sur DASH (.mpd)
   const rawStreamUrl = (() => {
     const url = currentStream?.url
     if (!url) return null
@@ -122,12 +122,13 @@ export default function PlayerPage() {
     }
     return url
   })()
+
   const streamUrl = rawStreamUrl
     ? proxyAPI.getStreamUrl(rawStreamUrl, channel.country)
     : proxyAPI.getBestStreamUrl(channel.id)
 
   const currentProg = epgData?.current
-  const nextProg    = epgData?.next
+  const nextProg = epgData?.next
 
   // Chaînes récentes pour la barre latérale
   const recentChannels = (watchHistory || []).filter(h => h.id !== channel.id).slice(0, 8)
@@ -145,19 +146,25 @@ export default function PlayerPage() {
         />
       </div>
 
-      {/* Channel info */}
-      <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+      {/* Channel info — layout responsive via CSS classes */}
+      <div className="player-channel-info">
+        <div className="player-channel-top">
           {/* Logo */}
-          <div style={{ width: 52, height: 52, background: 'var(--bg-card)', borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div style={{
+            width: 52, height: 52,
+            background: 'var(--bg-card)', borderRadius: 10, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', border: '1px solid var(--border)'
+          }}>
             {channel.logo
-              ? <img src={channel.logo} style={{ width: 40, height: 40, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
+              ? <img src={channel.logo} style={{ width: 40, height: 40, objectFit: 'contain' }} alt=""
+                  onError={e => e.target.style.display = 'none'} />
               : <span style={{ fontSize: '1.6rem' }}>{CATEGORY_EMOJI[channel.categories?.[0]] || '📺'}</span>
             }
           </div>
 
           {/* Info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="player-channel-meta">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{channel.name}</h2>
               <span className="badge badge-danger">🔴 LIVE</span>
@@ -181,7 +188,7 @@ export default function PlayerPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                   <strong>▶ {currentProg.title}</strong>
                   <span style={{ color: 'var(--text-muted)' }}>
-                    {format(new Date(currentProg.start), 'HH:mm', { locale: fr })} –
+                    {format(new Date(currentProg.start), 'HH:mm', { locale: fr })} –{' '}
                     {format(new Date(currentProg.stop), 'HH:mm', { locale: fr })}
                   </span>
                 </div>
@@ -196,53 +203,83 @@ export default function PlayerPage() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-secondary'}`} onClick={toggleFav} title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
-              {isFav ? '⭐' : '☆'}
+        {/* Actions — ligne séparée, responsive */}
+        <div className="player-channel-actions">
+          <button
+            className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={toggleFav}
+            title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          >
+            {isFav ? '⭐' : '☆'}
+          </button>
+          {document.pictureInPictureEnabled && (
+            <button className="btn btn-secondary btn-sm" onClick={handlePiP} title="Picture in Picture">
+              ⧉
             </button>
-            {document.pictureInPictureEnabled && (
-              <button className="btn btn-secondary btn-sm" onClick={handlePiP} title="Picture in Picture">
-                ⧉
-              </button>
-            )}
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowEpg(v => !v)} title="Programme TV">
-              📅
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowEpg(v => !v)} title="Programme TV">
+            📅
+          </button>
+          {streams.length > 1 && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setStreamIndex(i => (i + 1) % streams.length)}
+              title="Changer de flux"
+            >
+              ⟳
             </button>
-            {streams.length > 1 && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => setStreamIndex(i => (i + 1) % streams.length)}
-                title="Changer de flux"
-              >
-                ⟳
-              </button>
-            )}
-            {recentChannels.length > 0 && (
-              <button className={`btn btn-sm ${showSidebar ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setShowSidebar(v => !v)} title="Chaînes récentes">
-                📋
-              </button>
-            )}
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/live')} title="Changer de chaîne">
-              📡
+          )}
+          {recentChannels.length > 0 && (
+            <button
+              className={`btn btn-sm ${showSidebar ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setShowSidebar(v => !v)}
+              title="Chaînes récentes"
+            >
+              📋
             </button>
-          </div>
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/live')} title="Changer de chaîne">
+            📡
+          </button>
         </div>
       </div>
 
       {/* Main area with optional sidebar */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, position: 'relative' }}>
         {/* EPG Panel */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {showEpg && <EpgPanel channelId={channel.id} />}
         </div>
 
+        {/* Backdrop pour fermer le sidebar sur mobile */}
+        {showSidebar && recentChannels.length > 0 && (
+          <div className="player-sidebar-backdrop" onClick={() => setShowSidebar(false)} />
+        )}
+
         {/* Recent channels sidebar */}
         {showSidebar && recentChannels.length > 0 && (
-          <div style={{ width: 200, background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)', overflowY: 'auto', flexShrink: 0 }}>
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+          <div className="player-recent-sidebar" style={{
+            background: 'var(--bg-secondary)',
+            borderLeft: '1px solid var(--border)',
+            overflowY: 'auto',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              padding: '10px 12px',
+              borderBottom: '1px solid var(--border)',
+              fontSize: 12, fontWeight: 700,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.5px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
               🕐 RÉCEMMENT VUS
+              <button
+                className="topbar-btn"
+                style={{ width: 28, height: 28, fontSize: 13 }}
+                onClick={() => setShowSidebar(false)}
+              >✕</button>
             </div>
             {recentChannels.map(ch => (
               <div
@@ -251,14 +288,22 @@ export default function PlayerPage() {
                 style={{ padding: '8px 10px', gap: 8 }}
                 onClick={() => { setCurrentChannel(ch); navigate(`/player/${ch.id}`) }}
               >
-                <div style={{ width: 32, height: 32, background: 'var(--bg-card)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{
+                  width: 32, height: 32,
+                  background: 'var(--bg-card)', borderRadius: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden'
+                }}>
                   {ch.logo
-                    ? <img src={ch.logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
-                    : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
+                    ? <img src={ch.logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt=""
+                        onError={e => e.target.style.display = 'none'} />
+                    : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}|/span>
                   }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ch.name}
+                  </div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{COUNTRY_FLAG[ch.country]}</div>
                 </div>
               </div>
@@ -295,7 +340,9 @@ function EpgPanel({ channelId }) {
                 {format(new Date(p.start), 'HH:mm', { locale: fr })}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.title}
+                </div>
                 {p.description && (
                   <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.description.slice(0, 120)}
