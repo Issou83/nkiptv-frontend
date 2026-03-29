@@ -97,24 +97,27 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         // ── Buffer ────────────────────────────────────────────────────────────
         backBufferLength: 60,          // garde 60 s derrière pour les seeks
         maxBufferLength: 60,           // vise 60 s de buffer en avance
-        maxMaxBufferLength: 600,       // peut monter jusqu'à 600 s si bande passante le permet
+        maxMaxBufferLength: 120,       // plafond absolu
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 10,
+        liveSyncDurationCount: 7,      // segments en avance sur le live-edge
+        liveMaxLatencyDurationCount: 15,
         liveDurationInfinity: true,    // traite le stream comme infini (live)
         // ── Retry / robustesse ────────────────────────────────────────────────
         fragLoadingMaxRetry: 6,
-        fragLoadingRetryDelay: 1000,
-        fragLoadingMaxRetryTimeout: 64000,
+        fragLoadingRetryDelay: 500,
+        fragLoadingMaxRetryTimeout: 5000,
         manifestLoadingMaxRetry: 4,
         manifestLoadingRetryDelay: 1000,
         manifestLoadingMaxRetryTimeout: 64000,
         levelLoadingMaxRetry: 4,
         levelLoadingRetryDelay: 1000,
-        // ── Timeouts explicites (audio track sub-manifests = level loading) ────
-        fragLoadingTimeOut: 20000,
+        // ── Démarrage ─────────────────────────────────────────────────────────
+        startLevel: -1,                // sélection automatique de qualité
+        abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
+                // ── Timeouts explicites (audio track sub-manifests = level loading) ────
+        fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
         levelLoadingTimeOut: 20000,      // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
