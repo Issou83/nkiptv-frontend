@@ -1,8 +1,7 @@
-// v2.2 - reliable hydration + no stale getters
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-// ── Store Auth ──────────────────────────────────────────────────────────────
+// ── Store Auth ────────────────────────────────────────────────────────────────
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -10,34 +9,43 @@ export const useAuthStore = create(
       accessToken: null,
       refreshToken: null,
       activeProfileId: null,
-      _hasHydrated: false,
-
-      setHasHydrated: (val) => set({ _hasHydrated: val }),
 
       login: (user, accessToken, refreshToken) => {
         set({ user, accessToken, refreshToken, activeProfileId: user.activeProfileId || null })
       },
+
       logout: () => set({ user: null, accessToken: null, refreshToken: null, activeProfileId: null }),
+
       updateUser: (updates) => set(s => ({ user: s.user ? { ...s.user, ...updates } : null })),
+
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+
       setActiveProfile: (profileId) => set({ activeProfileId: profileId }),
+
+      get isAuth() { return !!get().accessToken && get().accessToken !== 'demo' },
+      get isDemo() { return get().accessToken === 'demo' },
+      get isAdmin() { return get().user?.role === 'admin' },
+      get isPremium() {
+        const u = get().user
+        return u?.role === 'admin' || ['premium', 'pro'].includes(u?.plan?.type)
+      },
+      get activeProfile() {
+        const { user, activeProfileId } = get()
+        if (!user?.profiles?.length) return null
+        return user.profiles.find(p => p._id === activeProfileId) || user.profiles[0]
+      },
     }),
     {
       name: 'nkiptv-auth',
       partialize: (s) => ({
-        user: s.user,
-        accessToken: s.accessToken,
-        refreshToken: s.refreshToken,
-        activeProfileId: s.activeProfileId,
+        user: s.user, accessToken: s.accessToken,
+        refreshToken: s.refreshToken, activeProfileId: s.activeProfileId,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true)
-      },
     }
   )
 )
 
-// ── Store UI ─────────────────────────────────────────────────────────────────
+// ── Store UI ──────────────────────────────────────────────────────────────────
 export const useUIStore = create(
   persist(
     (set) => ({
@@ -48,23 +56,34 @@ export const useUIStore = create(
       volume: 80,
       muted: false,
       fullscreen: false,
+      watchHistory: [], // recently watched channels (max 20)
+
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
       toggleSidebar: () => set(s => ({ sidebarOpen: !s.sidebarOpen })),
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
-      setCurrentChannel: (ch) => set({ currentChannel: ch }),
+      setCurrentChannel: (ch) => {
+        set({ currentChannel: ch })
+        if (ch) {
+          set(s => {
+            const filtered = (s.watchHistory || []).filter(h => h.id !== ch.id)
+            return { watchHistory: [ch, ...filtered].slice(0, 20) }
+          })
+        }
+      },
       setVolume: (volume) => set({ volume }),
       setMuted: (muted) => set({ muted }),
       setFullscreen: (fullscreen) => set({ fullscreen }),
+      clearHistory: () => set({ watchHistory: [] }),
     }),
     {
       name: 'nkiptv-ui',
-      partialize: (s) => ({ sidebarOpen: s.sidebarOpen, lang: s.lang, theme: s.theme, volume: s.volume })
+      partialize: (s) => ({ sidebarOpen: s.sidebarOpen, lang: s.lang, theme: s.theme, volume: s.volume, watchHistory: s.watchHistory }),
     }
   )
 )
 
-// ── Store Player ─────────────────────────────────────────────────────────────
+// ── Store Player ──────────────────────────────────────────────────────────────
 export const usePlayerStore = create((set) => ({
   isLoading: false,
   isPlaying: false,
@@ -72,6 +91,7 @@ export const usePlayerStore = create((set) => ({
   errorMsg: '',
   quality: 'auto',
   buffered: 0,
+
   setLoading: (v) => set({ isLoading: v, hasError: false }),
   setPlaying: (v) => set({ isPlaying: v, isLoading: false }),
   setError: (msg) => set({ hasError: true, errorMsg: msg, isLoading: false, isPlaying: false }),
