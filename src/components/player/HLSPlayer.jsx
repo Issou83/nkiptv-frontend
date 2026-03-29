@@ -6,7 +6,7 @@ import { useUIStore } from '../../store'
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 const MAX_RETRIES = 3
-const STALL_TIMEOUT_MS = 8000   // 8s sans progrès → stall détecté
+const STALL_TIMEOUT_MS = 15000  // 15s sans progrès → stall détecté (live streams buffer en chunks)
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
@@ -275,6 +275,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       const video = videoRef.current
       if (!video || video.paused) return
       const advanced = video.currentTime > lastTimeRef.current + 0.1
+      lastTimeRef.current = video.currentTime
+
       if (!advanced) {
         // Stall confirmé — tentative de récupération
         setStatus('loading')
@@ -290,9 +292,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           video.currentTime = t
           video.play().catch(() => {})
         }
+        // Ne PAS relancer startStallWatch ici : on attend le prochain événement 'playing'
+        // pour éviter la boucle (stall → startLoad → rebuffering → stall → boucle infinie)
+        return
       }
-      lastTimeRef.current = video.currentTime
-      startStallWatch(seq) // relance surveillance
+
+      startStallWatch(seq) // relance la surveillance uniquement si pas de stall
     }, STALL_TIMEOUT_MS)
   }, [])
 
