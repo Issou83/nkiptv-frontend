@@ -225,7 +225,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
             hls.swapAudioCodec()
             hls.recoverMediaError()
           } else {
-            // Échec définitif : reinitialiser le player
+            // Échec définitif : réinitialiser le player
             mediaRecoveryRef.current = 0
             if (mountedRef.current) {
               destroyHls()
@@ -338,7 +338,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           video.currentTime = t
           video.play().catch(() => {})
         }
-        // Ne PAS relancer startStallWatch ici : on attend le prochain év�nément 'playing'
+        // Ne PAS relancer startStallWatch ici : on attend le prochain événement 'playing'
         // pour éviter la boucle (stall → startLoad → rebuffering → stall → boucle infinie)
         return
       }
@@ -404,8 +404,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     const v = videoRef.current
     if (!v) return
     if (v.paused) v.play().catch(() => {})
-    else v
-.pause()
+    else v.pause()
   }
 
   const handleVideoClick = () => {
@@ -510,7 +509,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '6px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', backdropFilter: 'blur(8px)' }}
           onClick={(e) => { e.stopPropagation(); handleUnmute() }}
         >
-           🔇 <span>Appuyer pour activer le son</span>
+          🔇 <span>Appuyer pour activer le son</span>
         </div>
       )}
 
@@ -546,7 +545,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               {effectiveMuted ? '🔇' : volume > 50 ? '🔊' : '🔉'}
             </button>
 
-            {/* Volume slider – hidden on touch devices to save space */}
+            {/* Volume slider — hidden on touch devices to save space */}
             {!isTouchDevice && (
               <input
                 type="range" min="0" max="100" value={effectiveMuted ? 0 : volume}
@@ -575,7 +574,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               onClick={toggleFS}
               style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
             >
-              {isFullscreen ? '∡' : '⛶''}
+              {isFullscreen ? '⊡' : '⛶'}
             </button>
           </div>
         </div>
