@@ -261,7 +261,34 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     setIsMuted(false)
   }
 
-  // Time tracking
+  // ── Stall detection ────────────────────────────────────────────
+  const startStallWatch = useCallback((seq) => {
+    clearTimeout(stallTimerRef.current)
+    stallTimerRef.current = setTimeout(() => {
+      if (!mountedRef.current || seq !== initSeqRef.current) return
+      const video = videoRef.current
+      if (!video || video.paused) return
+      const advanced = video.currentTime > lastTimeRef.current + 0.1
+      if (!advanced) {
+        setStatus('loading')
+        setStallCount(c => c + 1)
+        const hls = hlsRef.current
+        if (hls) {
+          try { hls.startLoad(-1) } catch (_) {}
+          try { video.play().catch(() => {}) } catch (_) {}
+        } else if (video.src) {
+          const t = video.currentTime
+          video.load()
+          video.currentTime = t
+          video.play().catch(() => {})
+        }
+      }
+      lastTimeRef.current = video.currentTime
+      startStallWatch(seq)
+    }, STALL_TIMEOUT_MS)
+  }, [])
+
+  // Time tracking + stall surveillance
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -269,13 +296,30 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       setCurrentTime(video.currentTime)
       setDuration(video.duration || 0)
     }
+    const onPlaying = () => {
+      lastTimeRef.current = video.currentTime
+      startStallWatch(initSeqRef.current)
+    }
+    const onWaiting = () => { if (!video.paused) lastTimeRef.current = video.currentTime }
+    const onPause = () => clearTimeout(stallTimerRef.current)
+    const onEnded = () => clearTimeout(stallTimerRef.current)
+
     video.addEventListener('timeupdate', update)
     video.addEventListener('durationchange', update)
+    video.addEventListener('playing', onPlaying)
+    video.addEventListener('waiting', onWaiting)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('ended', onEnded)
     return () => {
       video.removeEventListener('timeupdate', update)
       video.removeEventListener('durationchange', update)
+      video.removeEventListener('playing', onPlaying)
+      video.removeEventListener('waiting', onWaiting)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('ended', onEnded)
+      clearTimeout(stallTimerRef.current)
     }
-  }, [])
+  }, [startStallWatch])
 
   // Fullscreen
   useEffect(() => {
@@ -362,7 +406,14 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       {status === 'loading' && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', gap: 16 }}>
           <div className="splash-loader"><span /><span /><span /></div>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Chargement du stream…</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
+            {stallCount > 0 ? `⚡ Reprise du flux… (${stallCount})` : 'Chargement du stream…'}
+          </p>
+          {stallCount >= 2 && (
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: 260 }}>
+              Ce flux est instable. Essayez de changer de chaîne ou réessayez plus tard.
+            </p>
+          )}
         </div>
       )}
 
