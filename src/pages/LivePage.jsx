@@ -7,30 +7,30 @@ const CATEGORIES = [null, 'news', 'sports', 'music', 'movies', 'entertainment', 
 
 const COUNTRIES = [
   { code: '', name: 'Tous les pays' },
-  { code: 'FR', name: 'ð«ð· France' },
-  { code: 'MA', name: 'ð²ð¦ Maroc' },
-  { code: 'DZ', name: 'ð©ð¿ AlgÃ©rie' },
-  { code: 'TN', name: 'ð¹ð³ Tunisie' },
-  { code: 'EG', name: 'ðªð¬ Ãgypte' },
-  { code: 'SA', name: 'ð¸ð¦ Arabie Saoudite' },
-  { code: 'US', name: 'ðºð¸ USA' },
-  { code: 'GB', name: 'ð¬ð§ UK' },
-  { code: 'DE', name: 'ð©ðª Allemagne' },
-  { code: 'ES', name: 'ðªð¸ Espagne' },
-  { code: 'IT', name: 'ð®ð¹ Italie' },
-  { code: 'TR', name: 'ð¹ð· Turquie' },
-  { code: 'BR', name: 'ð§ð· BrÃ©sil' },
-  { code: 'IN', name: 'ð®ð³ Inde' },
-  { code: 'SN', name: 'ð¸ð³ SÃ©nÃ©gal' },
-  { code: 'CI', name: 'ð¨ð® CÃ´te d\'Ivoire' },
-  { code: 'CM', name: 'ð¨ð² Cameroun' },
-  { code: 'NG', name: 'ð³ð¬ Nigeria' },
+  { code: 'FR', name: '🇫🇷 France' },
+  { code: 'MA', name: '🇲🇦 Maroc' },
+  { code: 'DZ', name: '🇩🇿 Algérie' },
+  { code: 'TN', name: '🇹🇳 Tunisie' },
+  { code: 'EG', name: '🇪🇬 Égypte' },
+  { code: 'SA', name: '🇸🇦 Arabie Saoudite' },
+  { code: 'US', name: '🇺🇸 USA' },
+  { code: 'GB', name: '🇬🇧 UK' },
+  { code: 'DE', name: '🇩🇪 Allemagne' },
+  { code: 'ES', name: '🇪🇸 Espagne' },
+  { code: 'IT', name: '🇮🇹 Italie' },
+  { code: 'TR', name: '🇹🇷 Turquie' },
+  { code: 'BR', name: '🇧🇷 Brésil' },
+  { code: 'IN', name: '🇮🇳 Inde' },
+  { code: 'SN', name: '🇸🇳 Sénégal' },
+  { code: 'CI', name: '🇨🇮 Côte d\'Ivoire' },
+  { code: 'CM', name: '🇨🇲 Cameroun' },
+  { code: 'NG', name: '🇳🇬 Nigeria' },
 ]
 
 const SORT_OPTIONS = [
-  { value: 'viewCount', label: 'ð¥ Populaires' },
-  { value: 'name',      label: 'ð¤ A-Z' },
-  { value: 'newest',    label: 'â¨ Nouveaux' },
+  { value: 'viewCount', label: '🔥 Populaires' },
+  { value: 'name',      label: '🔤 A-Z' },
+  { value: 'newest',    label: '✨ Nouveaux' },
 ]
 
 export default function LivePage() {
@@ -56,7 +56,7 @@ export default function LivePage() {
   const total    = data?.pagination?.total || 0
   const pages    = data?.pagination?.pages || 1
 
-  // Fermer menu pays au clic extÃ©rieur
+  // Fermer menu pays au clic extérieur
   useEffect(() => {
     const handler = (e) => {
       if (!countryRef.current?.contains(e.target)) setShowCountryMenu(false)
@@ -93,15 +93,15 @@ export default function LivePage() {
     <div style={{ paddingBottom: 24 }}>
       {/* Header */}
       <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ fontWeight: 800 }}>ð¡ Live TV</h2>
+        <h2 style={{ fontWeight: 800 }}>📡 Live TV</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 3 }}>
-          {isLoading ? 'â¦' : `${total.toLocaleString()} chaÃ®nes`}
-          {category && ` Â· ${CATEGORY_EMOJI[category]} ${category}`}
-          {country && ` Â· ${COUNTRY_FLAG[country]} ${country}`}
+          {isLoading ? '…' : `${total.toLocaleString()} chaînes`}
+          {category && ` · ${CATEGORY_EMOJI[category]} ${category}`}
+          {country && ` · ${COUNTRY_FLAG[country]} ${country}`}
         </p>
       </div>
 
-      {/* Filtres catÃ©gories */}
+      {/* Filtres catégories */}
       <div className="filter-row" style={{ paddingTop: 12 }}>
         {CATEGORIES.map(cat => (
           <div
@@ -109,7 +109,7 @@ export default function LivePage() {
             className={`filter-chip${(cat || '') === category ? ' active' : ''}`}
             onClick={() => setFilter('category', cat)}
           >
-            {cat ? `${CATEGORY_EMOJI[cat] || 'ðº'} ${cat.charAt(0).toUpperCase() + cat.slice(1)}` : 'ð Toutes'}
+            {cat ? `${CATEGORY_EMOJI[cat] || '📺'} ${cat.charAt(0).toUpperCase() + cat.slice(1)}` : '🌐 Toutes'}
           </div>
         ))}
       </div>
@@ -123,7 +123,7 @@ export default function LivePage() {
             className="btn btn-secondary btn-sm"
             style={{ gap: 6 }}
           >
-            {country ? `${COUNTRY_FLAG[country]} ${country}` : 'ð Pays'} â¾
+            {country ? `${COUNTRY_FLAG[country]} ${country}` : '🌍 Pays'} ▾
           </button>
           {showCountryMenu && (
             <div className="dropdown" style={{ top: 'calc(100% + 6px)', left: 0, right: 'auto', minWidth: 220, maxHeight: 300, overflowY: 'auto' }}>
@@ -134,7 +134,7 @@ export default function LivePage() {
                   onClick={() => { setFilter('country', c.code); setShowCountryMenu(false) }}
                 >
                   {c.name}
-                  {country === c.code && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>â</span>}
+                  {country === c.code && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>✓</span>}
                 </div>
               ))}
             </div>
@@ -157,7 +157,7 @@ export default function LivePage() {
             onClick={() => { setParams({}); setPage(1) }}
             style={{ fontSize: 12 }}
           >
-            â RÃ©initialiser
+            ✕ Réinitialiser
           </button>
         )}
 
@@ -171,7 +171,7 @@ export default function LivePage() {
               style={{ fontSize: 16, minWidth: 36, padding: '6px 10px' }}
               title={v === 'grid' ? 'Vue grille' : 'Vue liste'}
             >
-              {v === 'grid' ? 'â¦' : 'â¡'}
+              {v === 'grid' ? '▦' : '≡'}
             </button>
           ))}
         </div>
@@ -186,11 +186,11 @@ export default function LivePage() {
         </div>
       ) : channels.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">ðº</div>
-          <div className="empty-state-title">Aucune chaÃ®ne trouvÃ©e</div>
-          <div className="empty-state-text">Modifiez les filtres ou vÃ©rifiez votre connexion</div>
+          <div className="empty-state-icon">📺</div>
+          <div className="empty-state-title">Aucune chaîne trouvée</div>
+          <div className="empty-state-text">Modifiez les filtres ou vérifiez votre connexion</div>
           <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => { setParams({}); setPage(1) }}>
-            RÃ©initialiser les filtres
+            Réinitialiser les filtres
           </button>
         </div>
       ) : view === 'grid' ? (
@@ -202,21 +202,21 @@ export default function LivePage() {
                 <div className="channel-card-logo">
                   {ch.logo
                     ? <img src={ch.logo} alt={ch.name} onError={e => e.target.style.display = 'none'} />
-                    : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || 'ðº'}</span>
+                    : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                   <span style={{ position: 'absolute', top: 6, right: 6 }} className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                    {ch.streams?.length > 0 ? 'â LIVE' : 'OFF'}
+                    {ch.streams?.length > 0 ? '● LIVE' : 'OFF'}
                   </span>
                   {isCurrently && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(108,99,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '1.5rem' }}>â¶</span>
+                      <span style={{ fontSize: '1.5rem' }}>▶</span>
                     </div>
                   )}
                 </div>
                 <div className="channel-card-info">
                   <div className="channel-card-name">{ch.name}</div>
                   <div className="channel-card-meta">
-                    <span>{COUNTRY_FLAG[ch.country] || 'ð'}</span>
+                    <span>{COUNTRY_FLAG[ch.country] || '🌐'}</span>
                     {ch.categories?.[0] && <span>{CATEGORY_EMOJI[ch.categories[0]]}</span>}
                     {ch.streams?.[0]?.quality && <span className="badge badge-hd" style={{ marginLeft: 2 }}>{ch.streams[0].quality}</span>}
                   </div>
@@ -234,38 +234,38 @@ export default function LivePage() {
                 <div className="channel-list-logo">
                   {ch.logo
                     ? <img src={ch.logo} alt={ch.name} onError={e => e.target.style.display = 'none'} />
-                    : <span>{CATEGORY_EMOJI[ch.categories?.[0]] || 'ðº'}</span>
+                    : <span>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                    {COUNTRY_FLAG[ch.country]} {ch.country} Â· {ch.categories?.[0] || 'GÃ©nÃ©ral'}
+                    {COUNTRY_FLAG[ch.country]} {ch.country} · {ch.categories?.[0] || 'Général'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   {ch.streams?.[0]?.quality && <span className="badge badge-hd">{ch.streams[0].quality}</span>}
                   {isCurrently
-                    ? <span className="badge badge-success" style={{ background: 'rgba(108,99,255,0.2)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>â¶ En cours</span>
+                    ? <span className="badge badge-success" style={{ background: 'rgba(108,99,255,0.2)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>▶ En cours</span>
                     : <span className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                       {ch.streams?.length > 0 ? 'ð´ LIVE' : 'OFF'}
+                        {ch.streams?.length > 0 ? '🔴 LIVE' : 'OFF'}
                       </span>
-                    }
-                  </div>
+                  }
                 </div>
-              )
-            })}
-          </div>
-        )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Pagination */}
       {pages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '24px 16px' }}>
-          <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0) }}>â PrÃ©c.</button>
+          <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0) }}>← Préc.</button>
           <span style={{ fontSize: 13, color: 'var(--text-muted)', minWidth: 80, textAlign: 'center' }}>
             {page} / {pages}
           </span>
-          <button className="btn btn-secondary btn-sm" disabled={page === pages} onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0) }}>Suiv. â</button>
+          <button className="btn btn-secondary btn-sm" disabled={page === pages} onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0) }}>Suiv. →</button>
         </div>
       )}
     </div>
