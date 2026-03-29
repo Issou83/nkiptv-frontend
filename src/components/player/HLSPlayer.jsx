@@ -1,43 +1,42 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+ import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 import { useUIStore } from '../../store'
 
 // Detect touch device for UI adaptation
-const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+const isTouchDevice = typeof window !== 'undefined' &&
+  ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 const MAX_RETRIES = 5
-const STALL_TIMEOUT_MS = 12000  // 12s sans progrès → stall détecté (live streams buffer en chunks)
+const STALL_TIMEOUT_MS = 12000 // 12s sans progrÃ¨s â stall dÃ©tectÃ© (live streams buffer en chunks)
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const retryCountRef = useRef(0)
-  const mediaRecoveryRef = useRef(0)  // 0=none, 1=recoverMedia tried, 2=codecSwap tried
+  const mediaRecoveryRef = useRef(0) // 0=none, 1=recoverMedia tried, 2=codecSwap tried
   const srcRef = useRef(src)
-
-  const [status, setStatus] = useState('idle')   // idle | loading | playing | paused | error | stalled
+  const [status, setStatus] = useState('idle') // idle | loading | playing | paused | error | stalled
   const [showControls, setShowControls] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [levels, setLevels] = useState([])
-  const [isMuted, setIsMuted] = useState(false)   // track UI mute state separately
+  const [isMuted, setIsMuted] = useState(false) // track UI mute state separately
   const [stallCount, setStallCount] = useState(0) // nombre de stalls sur ce flux
-
   const containerRef = useRef(null)
   const controlsTimer = useRef(null)
-  const mountedRef = useRef(true)    // false after unmount
-  const initSeqRef = useRef(0)       // incremented on every initPlayer call; callbacks check this
-  const watchdogRef = useRef(null)   // holds watchdog timer so we can cancel it
-  const stallTimerRef = useRef(null) // détecte stall (vidéo bloquée)
-  const lastTimeRef = useRef(0)      // dernière position connue pour détecter si ça avance
+  const mountedRef = useRef(true) // false after unmount
+  const initSeqRef = useRef(0) // incremented on every initPlayer call; callbacks check this
+  const watchdogRef = useRef(null) // holds watchdog timer so we can cancel it
+  const stallTimerRef = useRef(null) // dÃ©tecte stall (vidÃ©o bloquÃ©e)
+  const lastTimeRef = useRef(0) // derniÃ¨re position connue pour dÃ©tecter si Ã§a avance
 
-  // Granular selectors → HLSPlayer only re-renders when volume/muted change,
+  // Granular selectors â HLSPlayer only re-renders when volume/muted change,
   // not when setCurrentChannel or any other unrelated store key is updated.
-  const volume   = useUIStore(s => s.volume)
-  const muted    = useUIStore(s => s.muted)
+  const volume = useUIStore(s => s.volume)
+  const muted = useUIStore(s => s.muted)
   const setVolume = useUIStore(s => s.setVolume)
-  const setMuted  = useUIStore(s => s.setMuted)
+  const setMuted = useUIStore(s => s.setMuted)
 
   // Use ref so callbacks always access fresh values without stale closures
   const onErrorRef = useRef(onError)
@@ -55,8 +54,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
-      // Stopper explicitement les chargements en cours avant de détruire l'instance.
-      // Sans ça, les XHR axios côté Railway continuent à être traités même après destroy().
+      // Stopper explicitement les chargements en cours avant de dÃ©truire l'instance.
+      // Sans Ã§a, les XHR axios cÃ´tÃ© Railway continuent Ã  Ãªtre traitÃ©s mÃªme aprÃ¨s destroy().
       try { hlsRef.current.stopLoad() } catch (_) {}
       try { hlsRef.current.detachMedia() } catch (_) {}
       hlsRef.current.destroy()
@@ -72,7 +71,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     clearTimeout(watchdogRef.current)
     watchdogRef.current = null
 
-    // Bump sequence — any callbacks from the previous init that fire after this
+    // Bump sequence â any callbacks from the previous init that fire after this
     // point will see seq !== initSeqRef.current and bail out early.
     const seq = ++initSeqRef.current
 
@@ -85,6 +84,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     destroyHls()
     retryCountRef.current = 0
     mediaRecoveryRef.current = 0
+
     if (mountedRef.current) {
       setStatus('loading')
       setLevels([])
@@ -94,17 +94,17 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        // ── Buffer ────────────────────────────────────────────────────────────
-        backBufferLength: 60,          // garde 60 s derrière pour les seeks
+        // ââ Buffer ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        backBufferLength: 60,          // garde 60 s derriÃ¨re pour les seeks
         maxBufferLength: 60,           // vise 60 s de buffer en avance
         maxMaxBufferLength: 120,       // plafond absolu
-        maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
+        maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mÃ©moire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
-        // ── Live sync ─────────────────────────────────────────────────────────
+        // ââ Live sync âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         liveSyncDurationCount: 7,      // segments en avance sur le live-edge
         liveMaxLatencyDurationCount: 15,
         liveDurationInfinity: true,    // traite le stream comme infini (live)
-        // ── Retry / robustesse ────────────────────────────────────────────────
+        // ââ Retry / robustesse ââââââââââââââââââââââââââââââââââââââââââââââââ
         fragLoadingMaxRetry: 6,
         fragLoadingRetryDelay: 500,
         fragLoadingMaxRetryTimeout: 5000,
@@ -113,17 +113,17 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         manifestLoadingMaxRetryTimeout: 64000,
         levelLoadingMaxRetry: 4,
         levelLoadingRetryDelay: 1000,
-        // ── Démarrage ─────────────────────────────────────────────────────────
-        startLevel: -1,                // sélection automatique de qualité
+        // ââ DÃ©marrage âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        startLevel: -1,                // sÃ©lection automatique de qualitÃ©
         abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
-                // ── Timeouts explicites (audio track sub-manifests = level loading) ────
+        // ââ Timeouts explicites (audio track sub-manifests = level loading) ââââ
         fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
-        levelLoadingTimeOut: 20000,      // couvre aussi les audio track .m3u8
-        // ── Réseau ────────────────────────────────────────────────────────────
+        levelLoadingTimeOut: 20000,    // couvre aussi les audio track .m3u8
+        // ââ RÃ©seau ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         xhrSetup: (xhr) => {
           xhr.withCredentials = false
-          xhr.timeout = 20000  // 20 s timeout par requête
+          xhr.timeout = 20000 // 20 s timeout par requÃªte
         },
       })
 
@@ -139,7 +139,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         // Normally this happens automatically on MEDIA_ATTACHED, but calling it
         // here as well ensures segment loading starts even if the controller got
         // stuck in IDLE (e.g. after a race with attachMedia / loadSource ordering).
-        try { hls.startLoad(-1) } catch (_e) { /* already loading — fine */ }
+        try { hls.startLoad(-1) } catch (_e) { /* already loading â fine */ }
 
         if (autoplay) {
           // Try unmuted first; fall back to muted autoplay (browser policy)
@@ -154,13 +154,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         } else {
           setStatus('paused')
         }
+
         onReadyRef.current?.()
 
-        // ── Watchdog ─────────────────────────────────────────────────────────
-        // If after 7 s the player is still not in 'playing' state (and there's
-        // no user-visible error), try forcing another startLoad.  This covers
-        // the case where HLS.js parsed the manifest and even created SourceBuffers
-        // but never began fetching segments (streamController stuck in IDLE).
+        // ââ Watchdog ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        // Si aprÃ¨s 12 s la vidÃ©o n'est pas en lecture normale, on tente une
+        // rÃ©cupÃ©ration douce sans dÃ©truire l'instance HLS.
         watchdogRef.current = setTimeout(() => {
           watchdogRef.current = null
           if (!mountedRef.current || seq !== initSeqRef.current) return
@@ -168,19 +167,21 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           const h = hlsRef.current
           if (!v || !h) return
 
-          const evtCount = Object.keys(h._events || {}).length
-          // evtCount === 0 → instance was silently destroyed; reinitialise.
-          if (evtCount === 0) {
-            hlsRef.current = null        // clear stale ref before re-init
-            if (mountedRef.current) initPlayer(url)
+          // VÃ©rification robuste basÃ©e sur l'Ã©tat rÃ©el de la vidÃ©o
+          if (v.readyState >= 3 && !v.paused) {
+            // La vidÃ©o a du data et joue â HLS est vivant, rien Ã  faire
             return
           }
-
-          // Still loading / paused but HLS is alive → nudge it
-          if (!v.paused && v.readyState < 3) {
-            try { h.startLoad(-1) } catch (_e) {}
+          if (!h.media || h.media !== v) {
+            // HLS dÃ©tachÃ© â rÃ©attacher sans dÃ©truire
+            try { h.attachMedia(v) } catch (_) {}
+            return
           }
-        }, 7000)
+          // Seulement si vraiment bloquÃ© (pas assez de data)
+          if (v.readyState < 2) {
+            try { h.startLoad(-1) } catch (_) {}
+          }
+        }, 12000) // aligner avec STALL_TIMEOUT_MS
 
         // Cancel watchdog when this HLS instance is destroyed
         hls.on(Hls.Events.DESTROYING, () => {
@@ -199,23 +200,23 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
 
-        // ── Non-fatal errors: silent recovery ─────────────────────────────────
+        // ââ Non-fatal errors: silent recovery âââââââââââââââââââââââââââââââââ
         if (!data.fatal) {
-          // Fragment load errors → forcer un startLoad
+          // Fragment load errors â forcer un startLoad
           if (
             data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
             data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT
           ) {
             try { hls.startLoad(-1) } catch (_e) {}
           }
-          // Audio track sub-manifest timeout/error → retry (évite la boucle audioTrackLoadTimeOut)
+          // Audio track sub-manifest timeout/error â retry (Ã©vite la boucle audioTrackLoadTimeOut)
           if (
             data.details === Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
             data.details === Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR
           ) {
             setTimeout(() => {
-              // Utilise hlsRef.current (pas la var locale `hls`) pour éviter les zombies :
-              // si une nouvelle instance a été créée entre-temps, seq guard l'arrête.
+              // Utilise hlsRef.current (pas la var locale `hls`) pour Ã©viter les zombies :
+              // si une nouvelle instance a Ã©tÃ© crÃ©Ã©e entre-temps, seq guard l'arrÃªte.
               if (!hlsRef.current || seq !== initSeqRef.current) return
               try { hlsRef.current.startLoad(-1) } catch (_e) {}
             }, 2000)
@@ -223,7 +224,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           return
         }
 
-        // ── Fatal errors ──────────────────────────────────────────────────────
+        // ââ Fatal errors âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           if (retryCountRef.current < MAX_RETRIES) {
             retryCountRef.current += 1
@@ -235,20 +236,20 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
             }, delay)
           } else {
             setStatus('error')
-            onErrorRef.current?.('Stream inaccessible après plusieurs tentatives')
+            onErrorRef.current?.('Stream inaccessible aprÃ¨s plusieurs tentatives')
           }
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
           if (mediaRecoveryRef.current === 0) {
-            // 1ère tentative : récupération standard
+            // 1Ã¨re tentative : rÃ©cupÃ©ration standard
             mediaRecoveryRef.current = 1
             hls.recoverMediaError()
           } else if (mediaRecoveryRef.current === 1) {
-            // 2ème tentative : swap codec + récupération
+            // 2Ã¨me tentative : swap codec + rÃ©cupÃ©ration
             mediaRecoveryRef.current = 2
             hls.swapAudioCodec()
             hls.recoverMediaError()
           } else {
-            // Échec définitif : réinitialiser le player
+            // Ãchec dÃ©finitif : rÃ©initialiser le player
             mediaRecoveryRef.current = 0
             if (mountedRef.current) {
               destroyHls()
@@ -291,12 +292,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       video.addEventListener('error', () => {
         if (mountedRef.current && seq === initSeqRef.current) {
           setStatus('error')
-          onErrorRef.current?.('Erreur lecture vidéo')
+          onErrorRef.current?.('Erreur lecture vidÃ©o')
         }
       })
     } else {
       setStatus('error')
-      onErrorRef.current?.('HLS non supporté sur ce navigateur')
+      onErrorRef.current?.('HLS non supportÃ© sur ce navigateur')
     }
   }, [autoplay, destroyHls])
 
@@ -326,7 +327,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     if (!isMuted) video.muted = muted
   }, [volume, muted, isMuted])
 
-  // Unmuté indicator
+  // UnmutÃ© indicator
   const handleUnmute = () => {
     const video = videoRef.current
     if (!video) return
@@ -334,9 +335,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     setIsMuted(false)
   }
 
-  // ── Stall detection ──────────────────────────────────────────
-  // Si la vidéo est en état "playing" mais que currentTime ne progresse
-  // plus pendant STALL_TIMEOUT_MS, on tente une récupération automatique.
+  // ââ Stall detection ââââââââââââââââââââââââââââââââââââââââ
+  // Si la vidÃ©o est en Ã©tat "playing" mais que currentTime ne progresse
+  // plus pendant STALL_TIMEOUT_MS, on tente une rÃ©cupÃ©ration automatique.
   const startStallWatch = useCallback((seq) => {
     clearTimeout(stallTimerRef.current)
     stallTimerRef.current = setTimeout(() => {
@@ -345,9 +346,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       if (!video || video.paused) return
       const advanced = video.currentTime > lastTimeRef.current + 0.1
       lastTimeRef.current = video.currentTime
-
       if (!advanced) {
-        // Stall confirmé — tentative de récupération
+        // Stall confirmÃ© â tentative de rÃ©cupÃ©ration
         setStatus('loading')
         setStallCount(c => c + 1)
         const hls = hlsRef.current
@@ -355,17 +355,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           try { hls.startLoad(-1) } catch (_) {}
           try { video.play().catch(() => {}) } catch (_) {}
         } else if (video.src) {
-          // Safari native : reload léger
+          // Safari native : reload lÃ©ger
           const t = video.currentTime
           video.load()
           video.currentTime = t
           video.play().catch(() => {})
         }
-        // Ne PAS relancer startStallWatch ici : on attend le prochain événement 'playing'
-        // pour éviter la boucle (stall → startLoad → rebuffering → stall → boucle infinie)
+        // Ne PAS relancer startStallWatch ici : on attend le prochain Ã©vÃ©nement 'playing'
+        // pour Ã©viter la boucle (stall â startLoad â rebuffering â stall â boucle infinie)
         return
       }
-
       startStallWatch(seq) // relance la surveillance uniquement si pas de stall
     }, STALL_TIMEOUT_MS)
   }, [])
@@ -383,7 +382,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       startStallWatch(initSeqRef.current)
     }
     const onWaiting = () => {
-      // "waiting" = le buffer est vide, on surveille de près
+      // "waiting" = le buffer est vide, on surveille de prÃ¨s
       if (!video.paused) lastTimeRef.current = video.currentTime
     }
     const onPause = () => clearTimeout(stallTimerRef.current)
@@ -395,6 +394,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     video.addEventListener('waiting', onWaiting)
     video.addEventListener('pause', onPause)
     video.addEventListener('ended', onEnded)
+
     return () => {
       video.removeEventListener('timeupdate', update)
       video.removeEventListener('durationchange', update)
@@ -456,7 +456,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
   }
 
   const formatTime = (s) => {
-    if (!s || isNaN(s)) return '🔴 LIVE'
+    if (!s || isNaN(s)) return 'ð´ LIVE'
     const h = Math.floor(s / 3600)
     const m = Math.floor((s % 3600) / 60)
     const sec = Math.floor(s % 60)
@@ -472,7 +472,13 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     <div
       ref={containerRef}
       className={`player-container${isFullscreen ? ' fullscreen' : ''}`}
-      style={{ width: '100%', aspectRatio: '16/9', maxHeight: 'calc(100vh - 160px)', background: '#000', touchAction: 'manipulation' }}
+      style={{
+        width: '100%',
+        aspectRatio: '16/9',
+        maxHeight: 'calc(100vh - 160px)',
+        background: '#000',
+        touchAction: 'manipulation'
+      }}
       onMouseMove={showControlsTemp}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
@@ -489,14 +495,19 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       {/* Loading / stall overlay */}
       {(status === 'loading') && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', gap: 16 }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.7)', gap: 16
+        }}>
           <div className="splash-loader"><span /><span /><span /></div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-            {stallCount > 0 ? `⚡ Reprise du flux… (${stallCount})` : 'Chargement du stream…'}
+            {stallCount > 0 ? `â¡ Reprise du fluxâ¦ (${stallCount})` : 'Chargement du streamâ¦'}
           </p>
           {stallCount >= 2 && (
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: 260 }}>
-              Ce flux est instable. Essayez de changer de chaîne ou réessayez plus tard.
+              Ce flux est instable. Essayez de changer de chaÃ®ne ou rÃ©essayez plus tard.
             </p>
           )}
         </div>
@@ -504,24 +515,38 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       {/* Error overlay */}
       {status === 'error' && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', gap: 12 }}>
-          <span style={{ fontSize: '3rem' }}>📡</span>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.85)', gap: 12
+        }}>
+          <span style={{ fontSize: '3rem' }}>ð¡</span>
           <p style={{ color: '#ff6b6b', fontWeight: 700, fontSize: 16 }}>Stream indisponible</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ce flux n'est peut-être pas disponible dans votre région</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ce flux n'est peut-Ãªtre pas disponible dans votre rÃ©gion</p>
           <button
             className="btn btn-primary btn-sm"
             onClick={(e) => { e.stopPropagation(); retryCountRef.current = 0; initPlayer(srcRef.current) }}
           >
-            🔄 Réessayer
+            ð RÃ©essayer
           </button>
         </div>
       )}
 
       {/* Paused overlay */}
       {status === 'paused' && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
-            <span style={{ fontSize: '1.8rem', marginLeft: 6 }}>▶</span>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            width: 72, height: 72,
+            background: 'rgba(255,255,255,0.15)',
+            borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '1.8rem', marginLeft: 6 }}>â¶</span>
           </div>
         </div>
       )}
@@ -529,15 +554,23 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       {/* Muted autoplay banner */}
       {isMuted && status === 'playing' && (
         <div
-          style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '6px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', backdropFilter: 'blur(8px)' }}
+          style={{
+            position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '6px 14px',
+            fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+            cursor: 'pointer', backdropFilter: 'blur(8px)'
+          }}
           onClick={(e) => { e.stopPropagation(); handleUnmute() }}
         >
-          🔇 <span>Appuyer pour activer le son</span>
+          ð <span>Appuyer pour activer le son</span>
         </div>
       )}
 
       {/* Controls overlay */}
-      <div className="player-overlay" style={{ opacity: showControls && status !== 'loading' ? 1 : 0, transition: 'opacity 0.3s' }}>
+      <div
+        className="player-overlay"
+        style={{ opacity: showControls && status !== 'loading' ? 1 : 0, transition: 'opacity 0.3s' }}
+      >
         <div /> {/* spacer */}
         <div onClick={(e) => e.stopPropagation()}>
           {/* Progress bar */}
@@ -556,23 +589,37 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           <div className="player-controls">
             <button
               onClick={togglePlay}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
+              style={{
+                background: 'none', border: 'none', color: '#fff', fontSize: 22,
+                cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'manipulation'
+              }}
             >
-              {status === 'playing' ? '⏸' : '▶'}
+              {status === 'playing' ? 'â¸' : 'â¶'}
             </button>
 
             <button
               onClick={toggleMute}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
+              style={{
+                background: 'none', border: 'none', color: '#fff', fontSize: 18,
+                cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'manipulation'
+              }}
             >
-              {effectiveMuted ? '🔇' : volume > 50 ? '🔊' : '🔉'}
+              {effectiveMuted ? 'ð' : volume > 50 ? 'ð' : 'ð'}
             </button>
 
-            {/* Volume slider — hidden on touch devices to save space */}
+            {/* Volume slider â hidden on touch devices to save space */}
             {!isTouchDevice && (
               <input
-                type="range" min="0" max="100" value={effectiveMuted ? 0 : volume}
-                onChange={e => { setVolume(Number(e.target.value)); if (effectiveMuted) { setMuted(false); setIsMuted(false) } }}
+                type="range" min="0" max="100"
+                value={effectiveMuted ? 0 : volume}
+                onChange={e => {
+                  setVolume(Number(e.target.value))
+                  if (effectiveMuted) { setMuted(false); setIsMuted(false) }
+                }}
                 style={{ width: 80, accentColor: 'var(--accent)', cursor: 'pointer' }}
               />
             )}
@@ -583,7 +630,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
             {levels.length > 1 && !isTouchDevice && (
               <select
-                style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', fontSize: 12, padding: '3px 6px', cursor: 'pointer' }}
+                style={{
+                  background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: 6, color: '#fff', fontSize: 12, padding: '3px 6px', cursor: 'pointer'
+                }}
                 onChange={e => { if (hlsRef.current) hlsRef.current.currentLevel = parseInt(e.target.value) }}
               >
                 <option value="-1">Auto</option>
@@ -595,9 +645,14 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
             <button
               onClick={toggleFS}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
+              style={{
+                background: 'none', border: 'none', color: '#fff', fontSize: 18,
+                cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'manipulation'
+              }}
             >
-              {isFullscreen ? '⊡' : '⛶'}
+              {isFullscreen ? 'â¡' : 'â¶'}
             </button>
           </div>
         </div>
