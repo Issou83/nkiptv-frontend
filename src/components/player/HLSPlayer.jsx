@@ -5,13 +5,14 @@ import { useUIStore } from '../../store'
 // Detect touch device for UI adaptation
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
-const MAX_RETRIES = 3
-const STALL_TIMEOUT_MS = 15000  // 15s sans progrès → stall détecté (live streams buffer en chunks)
+const MAX_RETRIES = 5
+const STALL_TIMEOUT_MS = 12000  // 12s sans progrès → stall détecté (live streams buffer en chunks)
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const retryCountRef = useRef(0)
+  const mediaRecoveryRef = useRef(0)  // 0=none, 1=recoverMedia tried, 2=codecSwap tried
   const srcRef = useRef(src)
 
   const [status, setStatus] = useState('idle')   // idle | loading | playing | paused | error | stalled
@@ -79,6 +80,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
     destroyHls()
     retryCountRef.current = 0
+    mediaRecoveryRef.current = 0
     if (mountedRef.current) {
       setStatus('loading')
       setLevels([])
@@ -88,18 +90,29 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        backBufferLength: 30,
-        maxBufferLength: 20,
-        maxMaxBufferLength: 60,
-        maxBufferSize: 60 * 1024 * 1024,
+        // ── Buffer ────────────────────────────────────────────────────────────
+        backBufferLength: 60,          // garde 60 s derrière pour les seeks
+        maxBufferLength: 60,           // vise 60 s de buffer en avance
+        maxMaxBufferLength: 600,       // peut monter jusqu'à 600 s si bande passante le permet
+        maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
+        maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
+        // ── Live sync ─────────────────────────────────────────────────────────
         liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 6,
-        fragLoadingMaxRetry: 4,
-        manifestLoadingMaxRetry: 3,
-        levelLoadingMaxRetry: 3,
+        liveMaxLatencyDurationCount: 10,
+        liveDurationInfinity: true,    // traite le stream comme infini (live)
+        // ── Retry / robustesse ────────────────────────────────────────────────
+        fragLoadingMaxRetry: 6,
         fragLoadingRetryDelay: 1000,
+        fragLoadingMaxRetryTimeout: 64000,
+        manifestLoadingMaxRetry: 4,
+        manifestLoadingRetryDelay: 1000,
+        manifestLoadingMaxRetryTimeout: 64000,
+        levelLoadingMaxRetry: 4,
+        levelLoadingRetryDelay: 1000,
+        // ── Réseau ────────────────────────────────────────────────────────────
         xhrSetup: (xhr) => {
           xhr.withCredentials = false
+          xhr.timeout = 20000  // 20 s timeout par requête
         },
       })
 
@@ -174,20 +187,53 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
-        if (!data.fatal) return
 
+        // ── Non-fatal errors: silent recovery ─────────────────────────────────
+        if (!data.fatal) {
+          // Pour les erreurs de chargement de fragment répétées, forcer un startLoad
+          if (
+            data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
+            data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT
+          ) {
+            try { hls.startLoad(-1) } catch (_e) {}
+          }
+          return
+        }
+
+        // ── Fatal errors ──────────────────────────────────────────────────────
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           if (retryCountRef.current < MAX_RETRIES) {
             retryCountRef.current += 1
+            const delay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 16000)
+            if (mountedRef.current) setStatus('loading')
             setTimeout(() => {
-              if (hlsRef.current && seq === initSeqRef.current) hlsRef.current.startLoad()
-            }, 2000 * retryCountRef.current)
+              if (!hlsRef.current || seq !== initSeqRef.current) return
+              try { hlsRef.current.startLoad(-1) } catch (_e) {}
+            }, delay)
           } else {
             setStatus('error')
             onErrorRef.current?.('Stream inaccessible après plusieurs tentatives')
           }
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          hls.recoverMediaError()
+          if (mediaRecoveryRef.current === 0) {
+            // 1ère tentative : récupération standard
+            mediaRecoveryRef.current = 1
+            hls.recoverMediaError()
+          } else if (mediaRecoveryRef.current === 1) {
+            // 2ème tentative : swap codec + récupération
+            mediaRecoveryRef.current = 2
+            hls.swapAudioCodec()
+            hls.recoverMediaError()
+          } else {
+            // Échec définitif : reinitialiser le player
+            mediaRecoveryRef.current = 0
+            if (mountedRef.current) {
+              destroyHls()
+              setTimeout(() => {
+                if (mountedRef.current && seq === initSeqRef.current) initPlayer(url)
+              }, 1000)
+            }
+          }
         } else {
           setStatus('error')
           onErrorRef.current?.('Erreur de lecture du stream')
@@ -292,7 +338,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           video.currentTime = t
           video.play().catch(() => {})
         }
-        // Ne PAS relancer startStallWatch ici : on attend le prochain événement 'playing'
+        // Ne PAS relancer startStallWatch ici : on attend le prochain év�nément 'playing'
         // pour éviter la boucle (stall → startLoad → rebuffering → stall → boucle infinie)
         return
       }
@@ -358,7 +404,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
     const v = videoRef.current
     if (!v) return
     if (v.paused) v.play().catch(() => {})
-    else v.pause()
+    else v
+.pause()
   }
 
   const handleVideoClick = () => {
@@ -463,7 +510,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: '6px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', backdropFilter: 'blur(8px)' }}
           onClick={(e) => { e.stopPropagation(); handleUnmute() }}
         >
-          🔇 <span>Appuyer pour activer le son</span>
+           🔇 <span>Appuyer pour activer le son</span>
         </div>
       )}
 
@@ -499,7 +546,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               {effectiveMuted ? '🔇' : volume > 50 ? '🔊' : '🔉'}
             </button>
 
-            {/* Volume slider — hidden on touch devices to save space */}
+            {/* Volume slider – hidden on touch devices to save space */}
             {!isTouchDevice && (
               <input
                 type="range" min="0" max="100" value={effectiveMuted ? 0 : volume}
@@ -528,7 +575,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               onClick={toggleFS}
               style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '6px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
             >
-              {isFullscreen ? '⊡' : '⛶'}
+              {isFullscreen ? '∡' : '⛶''}
             </button>
           </div>
         </div>
