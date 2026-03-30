@@ -6,14 +6,14 @@ import { useUIStore } from '../store'
 const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 const QUICK_CATEGORIES = [
-  { key: 'news',          label: 'Infos',     icon: 'ð°' },
-  { key: 'sports',        label: 'Sport',     icon: 'â½' },
-  { key: 'music',         label: 'Musique',   icon: 'ðµ' },
-  { key: 'movies',        label: 'CinÃ©ma',    icon: 'ð¬' },
-  { key: 'entertainment', label: 'Divertissement', icon: 'ð­' },
-  { key: 'kids',          label: 'Enfants',   icon: 'ð§¸' },
-  { key: 'documentary',   label: 'Docs',      icon: 'ð' },
-  { key: 'business',      label: 'Business',  icon: 'ð' },
+  { key: 'news',          label: 'Infos',     icon: '📰' },
+  { key: 'sports',        label: 'Sport',     icon: '⚽' },
+  { key: 'music',         label: 'Musique',   icon: '🎵' },
+  { key: 'movies',        label: 'Cinéma',    icon: '🎬' },
+  { key: 'entertainment', label: 'Divertissement', icon: '🎭' },
+  { key: 'kids',          label: 'Enfants',   icon: '🧸' },
+  { key: 'documentary',   label: 'Docs',      icon: '🌍' },
+  { key: 'business',      label: 'Business',  icon: '📊' },
 ]
 
 export default function SearchPage() {
@@ -76,11 +76,11 @@ export default function SearchPage() {
     <div style={{ padding: 16 }}>
       {/* Search input */}
       <div style={{ position: 'relative', marginBottom: 16 }}>
-        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 16 }}>ð</span>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 16 }}>🔍</span>
         <input
           ref={inputRef}
           className="input"
-          placeholder="Nom de chaÃ®ne, pays, catÃ©gorieâ¦"
+          placeholder="Nom de chaîne, pays, catégorie…"
           value={q}
           autoFocus={!isTouch}
           onChange={e => setQ(e.target.value)}
@@ -91,7 +91,7 @@ export default function SearchPage() {
             onClick={clearAll}
             style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 4 }}
           >
-            Ã
+            ×
           </button>
         )}
       </div>
@@ -114,10 +114,10 @@ export default function SearchPage() {
       {hasQuery && (
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
           {isLoading
-            ? 'ð Recherche en coursâ¦'
+            ? '🔍 Recherche en cours…'
             : channels.length > 0
-              ? `${channels.length} rÃ©sultat${channels.length > 1 ? 's' : ''}${debouncedQ ? ` pour "${debouncedQ}"` : ''}${activeCategory ? ` Â· ${activeCategory}` : ''}`
-              : `Aucun rÃ©sultat${debouncedQ ? ` pour "${debouncedQ}"` : ''}`
+              ? `${channels.length} résultat${channels.length > 1 ? 's' : ''}${debouncedQ ? ` pour "${debouncedQ}"` : ''}${activeCategory ? ` · ${activeCategory}` : ''}`
+              : `Aucun résultat${debouncedQ ? ` pour "${debouncedQ}"` : ''}`
           }
         </p>
       )}
@@ -136,7 +136,7 @@ export default function SearchPage() {
               <div className="channel-list-logo">
                 {ch.logo
                   ? <img src={ch.logo} alt="" onError={e => e.target.style.display = 'none'} style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                  : <span style={{ fontSize: '1.3rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || 'ðº'}</span>
+                  : <span style={{ fontSize: '1.3rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                 }
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -144,13 +144,13 @@ export default function SearchPage() {
                   {highlightMatch(ch.name, debouncedQ)}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {COUNTRY_FLAG[ch.country]} {ch.country} Â· {ch.categories?.[0] || 'â'}
+                  {COUNTRY_FLAG[ch.country]} {ch.country} · {ch.categories?.[0] || '—'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 {ch.streams?.[0]?.quality && <span className="badge badge-hd">{ch.streams[0].quality}</span>}
                 <span className={`badge ${ch.streams?.length ? 'badge-success' : 'badge-danger'}`}>
-                  {ch.streams?.length ? 'ð´ LIVE' : 'OFF'}
+                  {ch.streams?.length ? '🔴 LIVE' : 'OFF'}
                 </span>
               </div>
             </div>
@@ -158,9 +158,9 @@ export default function SearchPage() {
         </div>
       ) : hasQuery ? (
         <div className="empty-state">
-          <div className="empty-state-icon">ð</div>
-          <div className="empty-state-title">Aucun rÃ©sultat</div>
-          <div className="empty-state-text">Essayez un autre nom, pays ou catÃ©gorie</div>
+          <div className="empty-state-icon">🔍</div>
+          <div className="empty-state-title">Aucun résultat</div>
+          <div className="empty-state-text">Essayez un autre nom, pays ou catégorie</div>
           <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={clearAll}>
             Effacer la recherche
           </button>
@@ -168,9 +168,9 @@ export default function SearchPage() {
       ) : (
         <div>
           <div className="empty-state" style={{ paddingTop: 20 }}>
-            <div className="empty-state-icon">ð</div>
-            <div className="empty-state-title">Rechercher une chaÃ®ne</div>
-            <div className="empty-state-text">Saisissez le nom d'une chaÃ®ne, un pays ou utilisez les catÃ©gories ci-dessus</div>
+            <div className="empty-state-icon">🔍</div>
+            <div className="empty-state-title">Rechercher une chaîne</div>
+            <div className="empty-state-text">Saisissez le nom d'une chaîne, un pays ou utiliser les catégories ci-dessus</div>
           </div>
         </div>
       )}
