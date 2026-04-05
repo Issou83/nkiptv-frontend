@@ -96,12 +96,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         lowLatencyMode: false,
         // ── Buffer ────────────────────────────────────────────────────────────
         backBufferLength: 60,          // garde 60 s derrière pour les seeks
-        maxBufferLength: 60,           // vise 60 s de buffer en avance
-        maxMaxBufferLength: 120,       // plafond absolu
+        maxBufferLength: 30,           // vise 30 s de buffer en avance
+        maxMaxBufferLength: 30,        // plafond absolu
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDurationCount: 7,      // segments en avance sur le live-edge
+        liveSyncDurationCount: 3,      // segments en avance sur le live-edge (~18s)
         liveMaxLatencyDurationCount: 15,
         liveDurationInfinity: true,    // traite le stream comme infini (live)
         // ── Retry / robustesse ────────────────────────────────────────────────
@@ -114,16 +114,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         levelLoadingMaxRetry: 4,
         levelLoadingRetryDelay: 1000,
         // ── Démarrage ─────────────────────────────────────────────────────────
-        startLevel: -1,                // sélection automatique de qualité
+        startLevel: 0,                 // démarrer sur la qualité la plus basse (évite la boucle ABR)
         abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
         // ── Timeouts explicites (audio track sub-manifests = level loading) ────
         fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
         levelLoadingTimeOut: 20000,    // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
-        xhrSetup: (xhr) => {
-          xhr.withCredentials = false
-          xhr.timeout = 20000 // 20 s timeout par requête
+        fetchSetup: (context, initParams) => {
+          initParams.credentials = 'omit'
+          return new Request(context.url, initParams)
         },
       })
 
