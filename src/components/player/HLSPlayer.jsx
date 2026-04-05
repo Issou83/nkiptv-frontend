@@ -7,7 +7,7 @@ const isTouchDevice = typeof window !== 'undefined' &&
   ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 const MAX_RETRIES = 5
-const STALL_TIMEOUT_MS = 12000 // 12s sans progrès → stall détecté (live streams buffer en chunks)
+const STALL_TIMEOUT_MS = 12000 // 12s sans progrès → stall détecté (live streams bufhfer en chunks)
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
@@ -273,9 +273,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         }
       })
 
-      // Attach media BEFORE loading source (more reliable)
-      hls.attachMedia(video)
+      // loadSource MUST be called BEFORE attachMedia to avoid MediaSource race condition
       hls.loadSource(url)
+      hls.attachMedia(video)
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
