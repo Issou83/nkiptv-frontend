@@ -115,7 +115,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         levelLoadingRetryDelay: 1000,
         // ── Démarrage ─────────────────────────────────────────────────────────
         startLevel: -1,                // sélection automatique de qualité
-        abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
+        abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 5Mbps (HD par défaut)
+        liveSyncDuration: 6,           // latence live cible en secondes (override liveSyncDurationCount)
         // ── Timeouts explicites (audio track sub-manifests = level loading) ────
         fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
