@@ -140,12 +140,6 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-up', { method: 'POST' }).catch(() => {})
         }
 
-        // Explicitly tell the stream controller to start loading segments.
-        // Normally this happens automatically on MEDIA_ATTACHED, but calling it
-        // here as well ensures segment loading starts even if the controller got
-        // stuck in IDLE (e.g. after a race with attachMedia / loadSource ordering).
-        try { hls.startLoad(-1) } catch (_e) { /* already loading — fine */ }
-
         if (autoplay) {
           // Try unmuted first; fall back to muted autoplay (browser policy)
           video.play().catch(() => {
