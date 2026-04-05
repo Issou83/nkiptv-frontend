@@ -22,16 +22,22 @@ const COUNTRIES = [
   { code: 'BR', name: '🇧🇷 Brésil' },
   { code: 'IN', name: '🇮🇳 Inde' },
   { code: 'SN', name: '🇸🇳 Sénégal' },
-  { code: 'CI', name: '🇨🇮 Côte d\'Ivoire' },
+  { code: 'CI', name: "🇨🇮 Côte d'Ivoire" },
   { code: 'CM', name: '🇨🇲 Cameroun' },
   { code: 'NG', name: '🇳🇬 Nigeria' },
 ]
 
 const SORT_OPTIONS = [
-  { value: 'viewCount', label: '🔥 Populaires' },
+  { value: 'viewCount', label: '👍 Populaires' },
   { value: 'name',      label: '🔤 A-Z' },
   { value: 'newest',    label: '✨ Nouveaux' },
 ]
+
+const getLogoSrc = (logo) => {
+  if (!logo) return null
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com'
+  return apiUrl + '/api/proxy/logo?url=' + encodeURIComponent(logo)
+}
 
 export default function LivePage() {
   const navigate = useNavigate()
@@ -56,7 +62,6 @@ export default function LivePage() {
   const total    = data?.pagination?.total || 0
   const pages    = data?.pagination?.pages || 1
 
-  // Fermer menu pays au clic extérieur
   useEffect(() => {
     const handler = (e) => {
       if (!countryRef.current?.contains(e.target)) setShowCountryMenu(false)
@@ -71,7 +76,7 @@ export default function LivePage() {
 
   const openChannel = (ch) => {
     setCurrentChannel(ch)
-    navigate(`/player/${ch.id}`)
+    navigate('/player/' + ch.id)
   }
 
   const setFilter = (key, val) => {
@@ -87,50 +92,40 @@ export default function LivePage() {
     localStorage.setItem('nkiptv-view', v)
   }
 
-  const selectedCountry = COUNTRIES.find(c => c.code === country)
-
   return (
     <div style={{ paddingBottom: 24 }}>
-      {/* Header */}
       <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ fontWeight: 800 }}>📡 Live TV</h2>
+        <h2 style={{ fontWeight: 800 }}>📺 Live TV</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 3 }}>
-          {isLoading ? '…' : `${total.toLocaleString()} chaînes`}
-          {category && ` · ${CATEGORY_EMOJI[category]} ${category}`}
-          {country && ` · ${COUNTRY_FLAG[country]} ${country}`}
+          {isLoading ? '⏳' : total.toLocaleString() + ' chaînes'}
+          {category && ' 🗂 ' + (CATEGORY_EMOJI[category] || '') + ' ' + category}
+          {country && ' 🗂 ' + (COUNTRY_FLAG[country] || '') + ' ' + country}
         </p>
       </div>
 
-      {/* Filtres catégories */}
       <div className="filter-row" style={{ paddingTop: 12 }}>
         {CATEGORIES.map(cat => (
           <div
             key={cat || 'all'}
-            className={`filter-chip${(cat || '') === category ? ' active' : ''}`}
+            className={'filter-chip' + ((cat || '') === category ? ' active' : '')}
             onClick={() => setFilter('category', cat)}
           >
-            {cat ? `${CATEGORY_EMOJI[cat] || '📺'} ${cat.charAt(0).toUpperCase() + cat.slice(1)}` : '🌐 Toutes'}
+            {cat ? (CATEGORY_EMOJI[cat] || '📺') + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1) : '🌍 Toutes'}
           </div>
         ))}
       </div>
 
-      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        {/* Pays */}
         <div ref={countryRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowCountryMenu(v => !v)}
-            className="btn btn-secondary btn-sm"
-            style={{ gap: 6 }}
-          >
-            {country ? `${COUNTRY_FLAG[country]} ${country}` : '🌍 Pays'} ▾
+          <button onClick={() => setShowCountryMenu(v => !v)} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
+            {country ? (COUNTRY_FLAG[country] || '') + ' ' + country : '🌍 Pays'} ⌄
           </button>
           {showCountryMenu && (
             <div className="dropdown" style={{ top: 'calc(100% + 6px)', left: 0, right: 'auto', minWidth: 220, maxHeight: 300, overflowY: 'auto' }}>
               {COUNTRIES.map(c => (
                 <div
                   key={c.code}
-                  className={`dropdown-item${country === c.code ? ' active' : ''}`}
+                  className={'dropdown-item' + (country === c.code ? ' active' : '')}
                   onClick={() => { setFilter('country', c.code); setShowCountryMenu(false) }}
                 >
                   {c.name}
@@ -141,43 +136,25 @@ export default function LivePage() {
           )}
         </div>
 
-        {/* Sort */}
-        <select
-          value={sort}
-          onChange={e => setFilter('sort', e.target.value)}
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
-        >
+        <select value={sort} onChange={e => setFilter('sort', e.target.value)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        {/* Active filters */}
         {(category || country) && (
-          <button
-            className="btn btn-danger btn-sm"
-            onClick={() => { setParams({}); setPage(1) }}
-            style={{ fontSize: 12 }}
-          >
-            ✕ Réinitialiser
+          <button className="btn btn-danger btn-sm" onClick={() => { setParams({}); setPage(1) }} style={{ fontSize: 12 }}>
+            ↺ Réinitialiser
           </button>
         )}
 
-        {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
           {['grid', 'list'].map(v => (
-            <button
-              key={v}
-              onClick={() => setViewMode(v)}
-              className={`btn btn-secondary btn-sm${view === v ? ' btn-primary' : ''}`}
-              style={{ fontSize: 16, minWidth: 36, padding: '6px 10px' }}
-              title={v === 'grid' ? 'Vue grille' : 'Vue liste'}
-            >
-              {v === 'grid' ? '▦' : '≡'}
+            <button key={v} onClick={() => setViewMode(v)} className={'btn btn-secondary btn-sm' + (view === v ? ' btn-primary' : '')} style={{ fontSize: 16, minWidth: 36, padding: '6px 10px' }} title={v === 'grid' ? 'Vue grille' : 'Vue liste'}>
+              {v === 'grid' ? '▦' : '☰'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Channels */}
       {isLoading ? (
         <div className={view === 'grid' ? 'channel-grid channel-grid-lg' : ''} style={view === 'list' ? { padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 8 } : {}}>
           {Array.from({ length: view === 'grid' ? 12 : 8 }).map((_, i) => (
@@ -198,14 +175,14 @@ export default function LivePage() {
           {channels.map(ch => {
             const isCurrently = currentChannel?.id === ch.id
             return (
-              <div key={ch.id} className={`card channel-card${isCurrently ? ' channel-card-active' : ''}`} onClick={() => openChannel(ch)}>
+              <div key={ch.id} className={'card channel-card' + (isCurrently ? ' channel-card-active' : '')} onClick={() => openChannel(ch)}>
                 <div className="channel-card-logo">
                   {ch.logo
-                    ? <img src={ch.logo} alt={ch.name} onError={e => e.target.style.display = 'none'} />
+                    ? <img src={getLogoSrc(ch.logo)} alt={ch.name} onError={e => e.target.style.display = 'none'} />
                     : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
-                  <span style={{ position: 'absolute', top: 6, right: 6 }} className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                    {ch.status === 'down' ? '○ HORS LIGNE' : ch.streams?.length > 0 ? '● LIVE' : 'OFF'}
+                  <span style={{ position: 'absolute', top: 6, right: 6 }} className={'badge ' + (ch.streams?.length > 0 ? 'badge-success' : 'badge-danger')}>
+                    {ch.status === 'down' ? '⛔ HORS LIGNE' : ch.streams?.length > 0 ? '▶️ LIVE' : 'OFF'}
                   </span>
                   {isCurrently && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(108,99,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -230,25 +207,25 @@ export default function LivePage() {
           {channels.map(ch => {
             const isCurrently = currentChannel?.id === ch.id
             return (
-              <div key={ch.id} className={`channel-list-item${isCurrently ? ' active' : ''}`} onClick={() => openChannel(ch)}>
+              <div key={ch.id} className={'channel-list-item' + (isCurrently ? ' active' : '')} onClick={() => openChannel(ch)}>
                 <div className="channel-list-logo">
                   {ch.logo
-                    ? <img src={ch.logo} alt={ch.name} onError={e => e.target.style.display = 'none'} />
+                    ? <img src={getLogoSrc(ch.logo)} alt={ch.name} onError={e => e.target.style.display = 'none'} />
                     : <span>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                    {COUNTRY_FLAG[ch.country]} {ch.country} · {ch.categories?.[0] || 'Général'}
+                    {COUNTRY_FLAG[ch.country]} {ch.country} 🗂 {ch.categories?.[0] || 'Général'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   {ch.streams?.[0]?.quality && <span className="badge badge-hd">{ch.streams[0].quality}</span>}
                   {isCurrently
                     ? <span className="badge badge-success" style={{ background: 'rgba(108,99,255,0.2)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>▶ En cours</span>
-                    : <span className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                        {ch.status === 'down' ? '🔴 HORS LIGNE' : ch.streams?.length > 0 ? '🔴 LIVE' : 'OFF'}
+                    : <span className={'badge ' + (ch.streams?.length > 0 ? 'badge-success' : 'badge-danger')}>
+                        {ch.status === 'down' ? '⛔ HORS LIGNE' : ch.streams?.length > 0 ? '▶ LIVE' : 'OFF'}
                       </span>
                   }
                 </div>
@@ -258,14 +235,11 @@ export default function LivePage() {
         </div>
       )}
 
-      {/* Pagination */}
       {pages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '24px 16px' }}>
-          <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0) }}>← Préc.</button>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)', minWidth: 80, textAlign: 'center' }}>
-            {page} / {pages}
-          </span>
-          <button className="btn btn-secondary btn-sm" disabled={page === pages} onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0) }}>Suiv. →</button>
+          <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0) }}>⬅ Préc.</button>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', minWidth: 80, textAlign: 'center' }}>{page} / {pages}</span>
+          <button className="btn btn-secondary btn-sm" disabled={page === pages} onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0) }}>Suiv. ➡</button>
         </div>
       )}
     </div>
