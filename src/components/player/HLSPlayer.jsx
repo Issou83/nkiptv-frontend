@@ -101,9 +101,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDurationCount: 3,      // segments en avance sur le live-edge (~18s)
-        liveMaxLatencyDurationCount: 15,
+        liveSyncDuration: 18,          // sync live-edge à 18s (remplace liveSyncDurationCount)
+        liveBackBufferLength: 0,       // pas de back-buffer pour le live
         liveDurationInfinity: true,    // traite le stream comme infini (live)
+        initialLiveManifestSize: 1,    // commence à lire dès 1 segment disponible
         // ── Retry / robustesse ────────────────────────────────────────────────
         fragLoadingMaxRetry: 6,
         fragLoadingRetryDelay: 500,
@@ -114,6 +115,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         levelLoadingMaxRetry: 4,
         levelLoadingRetryDelay: 1000,
         // ── Démarrage ─────────────────────────────────────────────────────────
+        startPosition: -1,             // laisser HLS.js calculer la position live
+        startFragPrefetch: true,       // charge les frags dès que la playlist est disponible
         startLevel: 0,                 // démarrer sur la qualité la plus basse (évite la boucle ABR)
         abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
         // ── Timeouts explicites (audio track sub-manifests = level loading) ────
@@ -139,6 +142,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         if (channelId) {
           fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-up', { method: 'POST' }).catch(() => {})
         }
+
+        // Re-trigger après 500 ms : si le streamController est resté IDLE avec
+        // nextLoadPosition hors de la fenêtre live, liveSyncPosition sera disponible
+        // et on peut forcer le rechargement à la bonne position.
+        setTimeout(() => {
+          if (seq !== initSeqRef.current || !mountedRef.current) return
+          const h = hlsRef.current
+          if (!h) return
+          try { h.startLoad(h.liveSyncPosition || -1) } catch (_) {}
+        }, 500)
 
         if (autoplay) {
           // Try unmuted first; fall back to muted autoplay (browser policy)
