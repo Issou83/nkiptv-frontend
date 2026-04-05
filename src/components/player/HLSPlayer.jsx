@@ -96,12 +96,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         lowLatencyMode: false,
         // ── Buffer ────────────────────────────────────────────────────────────
         backBufferLength: 60,          // garde 60 s derrière pour les seeks
-        maxBufferLength: 30,           // vise 30 s de buffer en avance
-        maxMaxBufferLength: 30,        // plafond absolu
+        maxBufferLength: 60,           // vise 30 s de buffer en avance
+        maxMaxBufferLength: 120,        // plafond absolu
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDuration: 18,          // sync live-edge à 18s (remplace liveSyncDurationCount)
+        liveSyncDuration: 6,          // sync live-edge à 18s (remplace liveSyncDurationCount)
         liveBackBufferLength: 0,       // pas de back-buffer pour le live
         liveDurationInfinity: true,    // traite le stream comme infini (live)
         initialLiveManifestSize: 1,    // commence à lire dès 1 segment disponible
@@ -117,8 +117,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         // ── Démarrage ─────────────────────────────────────────────────────────
         startPosition: -1,             // laisser HLS.js calculer la position live
         startFragPrefetch: true,       // charge les frags dès que la playlist est disponible
-        startLevel: 0,                 // démarrer sur la qualité la plus basse (évite la boucle ABR)
-        abrEwmaDefaultEstimate: 500000, // estimation initiale bande passante 500kbps
+        startLevel: -1,                 // démarrer sur la qualité la plus basse (évite la boucle ABR)
+        abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 500kbps
         // ── Timeouts explicites (audio track sub-manifests = level loading) ────
         fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
