@@ -135,6 +135,11 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
         setLevels(data.levels || [])
 
+        // StreamHealer : signaler que la chaîne est de nouveau UP
+        if (channelId) {
+          fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-up', { method: 'POST' }).catch(() => {})
+        }
+
         // Explicitly tell the stream controller to start loading segments.
         // Normally this happens automatically on MEDIA_ATTACHED, but calling it
         // here as well ensures segment loading starts even if the controller got
@@ -237,6 +242,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           } else {
             setStatus('error')
             onErrorRef.current?.('Stream inaccessible après plusieurs tentatives')
+            // StreamHealer : signaler que la chaîne est DOWN
+            if (channelId) {
+              fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-down', { method: 'POST' }).catch(() => {})
+            }
           }
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
           if (mediaRecoveryRef.current === 0) {
