@@ -205,7 +205,7 @@ export default function LivePage() {
                     : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                   <span style={{ position: 'absolute', top: 6, right: 6 }} className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                    {ch.streams?.length > 0 ? '● LIVE' : 'OFF'}
+                    {ch.status === 'down' ? '○ HORS LIGNE' : ch.streams?.length > 0 ? '● LIVE' : 'OFF'}
                   </span>
                   {isCurrently && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(108,99,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -248,7 +248,7 @@ export default function LivePage() {
                   {isCurrently
                     ? <span className="badge badge-success" style={{ background: 'rgba(108,99,255,0.2)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>▶ En cours</span>
                     : <span className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
-                        {ch.streams?.length > 0 ? '🔴 LIVE' : 'OFF'}
+                        {ch.status === 'down' ? '🔴 HORS LIGNE' : ch.streams?.length > 0 ? '🔴 LIVE' : 'OFF'}
                       </span>
                   }
                 </div>
