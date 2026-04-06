@@ -101,7 +101,6 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDuration: 6,          // sync live-edge à 6s (remplace liveSyncDurationCount)
         liveSyncDurationCount: 3,      // coller au live edge (3 segments)
         liveMaxLatencyDurationCount: 8, // max 8 segments de lag
         liveBackBufferLength: 0,       // pas de back-buffer pour le live
