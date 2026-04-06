@@ -101,7 +101,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         maxBufferSize: 120 * 1024 * 1024, // 120 MB max en mémoire
         maxBufferHole: 0.5,            // comble les trous de moins de 0.5 s automatiquement
         // ── Live sync ─────────────────────────────────────────────────────────
-        liveSyncDuration: 6,          // sync live-edge à 18s (remplace liveSyncDurationCount)
+        liveSyncDuration: 6,          // sync live-edge à 6s (remplace liveSyncDurationCount)
+        liveSyncDurationCount: 3,      // coller au live edge (3 segments)
+        liveMaxLatencyDurationCount: 8, // max 8 segments de lag
         liveBackBufferLength: 0,       // pas de back-buffer pour le live
         liveDurationInfinity: true,    // traite le stream comme infini (live)
         initialLiveManifestSize: 1,    // commence à lire dès 1 segment disponible
@@ -117,8 +119,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         // ── Démarrage ─────────────────────────────────────────────────────────
         startPosition: -1,             // laisser HLS.js calculer la position live
         startFragPrefetch: true,       // charge les frags dès que la playlist est disponible
-        startLevel: -1,                 // démarrer sur la qualité la plus basse (évite la boucle ABR)
-        abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 500kbps
+        startLevel: 0,                  // forcer le niveau bas pour éviter le level-switch immédiat
+        capLevelToPlayerSize: true,    // limiter la qualité à la taille du player
+        abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 5Mbps
         // ── Timeouts explicites (audio track sub-manifests = level loading) ────
         fragLoadingTimeOut: 30000,
         manifestLoadingTimeOut: 20000,
@@ -204,6 +207,21 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       })
 
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        // Si on vient de switcher vers un niveau plus haut, force une resync
+        if (data.level > 0) {
+          setTimeout(() => {
+            try {
+              const v = videoRef.current
+              if (v && v.readyState < 2) {
+                console.warn('[HLS] Level switched but not playing, resyncing')
+                hls.startLoad(-1)
+              }
+            } catch (_e) {}
+          }, 2000)
+        }
+      })
+
       // Track 'playing' listener so we can clean it up on the next init
       const playingListener = () => {
         if (mountedRef.current && seq === initSeqRef.current) setStatus('playing')
@@ -213,6 +231,19 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
+
+        // Resync au live edge si HLS.js se retrouve trop loin derrière
+        if (
+          data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+          data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
+          (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR && data.response?.code === 404)
+        ) {
+          console.warn('[HLS] Stall/expired fragment, resyncing to live edge')
+          setTimeout(() => {
+            try { hls.startLoad(-1) } catch (_e) {}
+          }, 500)
+          return
+        }
 
         // Ignorer les erreurs de piste audio alternative — revenir à l'audio principal
         if (
