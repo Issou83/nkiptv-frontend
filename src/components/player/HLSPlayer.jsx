@@ -162,19 +162,15 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           try { h.startLoad(h.liveSyncPosition || -1) } catch (_) {}
         }, 500)
 
-        if (autoplay) {
-          // Try unmuted first; fall back to muted autoplay (browser policy)
+        video.play().catch(() => {
+          if (!mountedRef.current || seq !== initSeqRef.current) return
+          video.muted = true
+          setIsMuted(true)
           video.play().catch(() => {
-            if (!mountedRef.current || seq !== initSeqRef.current) return
-            video.muted = true
-            setIsMuted(true)
-            video.play().catch(() => {
-              if (mountedRef.current && seq === initSeqRef.current) setStatus('paused')
-            })
+            // autoplay bloqué par le navigateur — ok, l'utilisateur peut cliquer play
+            console.warn('[HLS] autoplay blocked')
           })
-        } else {
-          setStatus('paused')
-        }
+        })
 
         onReadyRef.current?.()
 
@@ -365,22 +361,18 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
   useEffect(() => {
     srcRef.current = src
     if (src) initPlayer(src)
-    let cleanedUp = false
     return () => {
-      cleanedUp = true
       clearTimeout(watchdogRef.current)
       watchdogRef.current = null
-      // Délai minimal pour éviter la race condition React StrictMode :
-      // le destroy ne doit pas fermer le MediaSource avant que HLS.js l'ait utilisé.
+      // Petit délai pour laisser le prochain effet s'initialiser si React remonte le composant (StrictMode)
       setTimeout(() => {
-        if (!cleanedUp) return
         destroyHls()
         const video = videoRef.current
         if (video && playingListenerRef.current) {
           video.removeEventListener('playing', playingListenerRef.current)
           playingListenerRef.current = null
         }
-      }, 0)
+      }, 100)
     }
   }, [src, initPlayer, destroyHls])
 
