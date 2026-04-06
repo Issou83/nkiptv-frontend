@@ -127,8 +127,14 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         levelLoadingTimeOut: 30000,    // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
         fetchSetup: (context, initParams) => {
-          initParams.credentials = 'omit'
-          return new Request(context.url, { ...initParams, signal: AbortSignal.timeout(15000) })
+          try {
+            const params = { ...(initParams || {}), credentials: 'omit' }
+            // N'écraser le signal que s'il n'y en a pas déjà un (évite conflit avec HLS.js)
+            if (!params.signal) params.signal = AbortSignal.timeout(15000)
+            return new Request(context.url, params)
+          } catch (_e) {
+            return new Request(context.url, initParams || {})
+          }
         },
         preferManagedMediaSource: false,
       })
