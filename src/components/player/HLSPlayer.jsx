@@ -222,6 +222,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               try { hlsRef.current.startLoad(-1) } catch (_e) {}
             }, 2000)
           }
+          // Buffer stall (non-fatal) → forcer reload + replay pour sortir de la boucle
+          // BUFFER_STALLED_ERROR : buffer vidé, readyState=0/1, currentTime figé
+          // BUFFER_NUDGE_ON_STALL : HLS.js a tenté un nudge mais la vidéo reste bloquée
+          if (
+            data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+            data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL
+          ) {
+            try { hls.startLoad(-1) } catch (_e) {}
+            try { video.play().catch(() => {}) } catch (_e) {}
+          }
           return
         }
 
