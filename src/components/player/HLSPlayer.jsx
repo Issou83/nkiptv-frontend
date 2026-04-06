@@ -128,9 +128,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           initParams.credentials = 'omit'
           return new Request(context.url, initParams)
         },
+        preferManagedMediaSource: false,
       })
 
       hlsRef.current = hls
+
+      // Cancel watchdog when this HLS instance is destroyed (enregistré une seule fois)
+      hls.on(Hls.Events.DESTROYING, () => {
+        clearTimeout(watchdogRef.current)
+        watchdogRef.current = null
+      })
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         // Stale-init guard: if a newer initPlayer call has already started, ignore this.
@@ -195,11 +202,6 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
           }
         }, 12000) // aligner avec STALL_TIMEOUT_MS
 
-        // Cancel watchdog when this HLS instance is destroyed
-        hls.on(Hls.Events.DESTROYING, () => {
-          clearTimeout(watchdogRef.current)
-          watchdogRef.current = null
-        })
       })
 
       // Track 'playing' listener so we can clean it up on the next init
@@ -211,6 +213,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
+
+        // Ignorer les erreurs de piste audio alternative — revenir à l'audio principal
+        if (
+          data.type === Hls.ErrorTypes.MEDIA_ERROR &&
+          data.details === Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR
+        ) {
+          console.warn('[HLS] Audio alt track error, switching to main audio')
+          hls.audioTrack = -1
+          return
+        }
 
         // ── Non-fatal errors: silent recovery ─────────────────────────────────
         if (!data.fatal) {
@@ -259,11 +271,13 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
             // 1ère tentative : récupération standard
             mediaRecoveryRef.current = 1
             hls.recoverMediaError()
+            setTimeout(() => { try { hls.startLoad(-1) } catch (_e) {} }, 200)
           } else if (mediaRecoveryRef.current === 1) {
             // 2ème tentative : swap codec + récupération
             mediaRecoveryRef.current = 2
             hls.swapAudioCodec()
             hls.recoverMediaError()
+            setTimeout(() => { try { hls.startLoad(-1) } catch (_e) {} }, 200)
           } else {
             // Échec définitif : réinitialiser le player
             mediaRecoveryRef.current = 0
