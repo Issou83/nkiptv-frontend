@@ -108,7 +108,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         initialLiveManifestSize: 1,    // commence à lire dès 1 segment disponible
         // ── Retry / robustesse ────────────────────────────────────────────────
         fragLoadingMaxRetry: 6,
-        fragLoadingRetryDelay: 500,
+        fragLoadingRetryDelay: 1000,
         fragLoadingMaxRetryTimeout: 5000,
         manifestLoadingMaxRetry: 4,
         manifestLoadingRetryDelay: 1000,
@@ -121,10 +121,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         startLevel: 0,                  // forcer le niveau bas pour éviter le level-switch immédiat
         capLevelToPlayerSize: true,    // limiter la qualité à la taille du player
         abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 5Mbps
-        // ── Timeouts explicites (audio track sub-manifests = level loading) ────
-        fragLoadingTimeOut: 30000,
-        manifestLoadingTimeOut: 20000,
-        levelLoadingTimeOut: 20000,    // couvre aussi les audio track .m3u8
+        // ── Timeouts explicites — allongés pour Render cold start (jusqu'à 30s) ──
+        fragLoadingTimeOut: 60000,
+        manifestLoadingTimeOut: 30000,
+        levelLoadingTimeOut: 30000,    // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
         fetchSetup: (context, initParams) => {
           initParams.credentials = 'omit'
