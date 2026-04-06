@@ -35,8 +35,7 @@ const SORT_OPTIONS = [
 
 const getLogoSrc = (logo) => {
   if (!logo) return null
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com'
-  return apiUrl + '/api/proxy/logo?url=' + encodeURIComponent(logo)
+  return 'https://wsrv.nl/?url=' + encodeURIComponent(logo.replace(/^https?:\/\//, '')) + '&w=80&h=80&fit=contain'
 }
 
 export default function LivePage() {
