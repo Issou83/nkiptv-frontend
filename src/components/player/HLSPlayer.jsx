@@ -121,6 +121,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         startLevel: 0,                  // forcer le niveau bas pour éviter le level-switch immédiat
         capLevelToPlayerSize: true,    // limiter la qualité à la taille du player
         abrEwmaDefaultEstimate: 5000000, // estimation initiale bande passante 5Mbps
+        abrBandWidthFactor: 0.7,
+        abrBandWidthUpFactor: 0.3,
         // ── Timeouts explicites — allongés pour Render cold start (jusqu'à 30s) ──
         fragLoadingTimeOut: 60000,
         manifestLoadingTimeOut: 30000,
@@ -152,6 +154,17 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         if (seq !== initSeqRef.current || !mountedRef.current) return
 
         setLevels(data.levels || [])
+
+        // Verrouiller le niveau 0 pendant 10s pour laisser le buffer se remplir
+        // avant que l'ABR puisse switcher (évite les segments expirés)
+        hls.nextLevel = 0
+        setTimeout(() => {
+          try {
+            if (hlsRef.current === hls && mountedRef.current) {
+              hls.nextLevel = -1 // réactive l'ABR
+            }
+          } catch (_) {}
+        }, 10000)
 
         // StreamHealer : signaler que la chaîne est de nouveau UP
         if (channelId) {
@@ -208,19 +221,16 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       })
 
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        // Si on vient de switcher vers un niveau plus haut, force une resync
-        if (data.level > 0) {
-          setTimeout(() => {
-            try {
-              const v = videoRef.current
-              if (v && v.readyState < 2) {
-                console.warn('[HLS] Level switched but not playing, resyncing')
-                hls.startLoad(-1)
-              }
-            } catch (_e) {}
-          }, 2000)
-        }
+      hls.on(Hls.Events.LEVEL_SWITCHED, () => {
+        // Après tout changement de niveau, forcer un resync au live edge
+        // pour éviter les segments expirés (CDN live window courte)
+        setTimeout(() => {
+          try {
+            if (hlsRef.current === hls && mountedRef.current) {
+              hls.startLoad(-1)
+            }
+          } catch (_e) {}
+        }, 150)
       })
 
       // Track 'playing' listener so we can clean it up on the next init
@@ -285,6 +295,10 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
               if (!hlsRef.current || seq !== initSeqRef.current) return
               try { hlsRef.current.startLoad(-1) } catch (_e) {}
             }, 2000)
+          }
+          if (data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL) {
+            try { hls.startLoad(-1) } catch (_) {}
+            return
           }
           return
         }
