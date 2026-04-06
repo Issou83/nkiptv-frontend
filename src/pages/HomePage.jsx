@@ -26,7 +26,7 @@ const FEATURED_COUNTRIES = [
 
 const getLogoSrc = (logo) => {
   if (!logo) return null
-  return 'https://wsrv.nl/?url=' + encodeURIComponent(logo.replace(/^https?:\/\//, '')) + '&w=80&h=80&fit=contain'
+  return (import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com') + '/api/proxy/logo?url=' + encodeURIComponent(logo)
 }
 
 function CountryCard({ country, onClick }) {
