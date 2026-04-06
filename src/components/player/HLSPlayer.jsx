@@ -128,7 +128,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         // ── Réseau ────────────────────────────────────────────────────────────
         fetchSetup: (context, initParams) => {
           initParams.credentials = 'omit'
-          return new Request(context.url, initParams)
+          return new Request(context.url, { ...initParams, signal: AbortSignal.timeout(15000) })
         },
         preferManagedMediaSource: false,
       })
@@ -227,6 +227,15 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
 
+        // Retry sur 503 — backend Render en cold start
+        if (!data.fatal && data.response?.code === 503) {
+          console.warn('[HLS] 503 on segment, retrying after 3s...')
+          setTimeout(() => {
+            try { hls.startLoad() } catch (_e) {}
+          }, 3000)
+          return
+        }
+
         // Resync au live edge si HLS.js se retrouve trop loin derrière
         if (
           data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
@@ -322,7 +331,15 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       // attachMedia DOIT être avant loadSource (spec HLS.js)
       hls.attachMedia(video)
-      hls.loadSource(url)
+
+      // Réveiller Render avant de lancer HLS (cold start peut prendre jusqu'à 30s)
+      ;(async () => {
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com'
+        try {
+          await fetch(`${backendUrl}/api/health`, { signal: AbortSignal.timeout(8000) })
+        } catch (_e) {}
+        if (seq === initSeqRef.current) hls.loadSource(url)
+      })()
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
