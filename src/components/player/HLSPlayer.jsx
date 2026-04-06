@@ -324,9 +324,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         }
       })
 
-      // loadSource MUST be called BEFORE attachMedia to avoid MediaSource race condition
-      hls.loadSource(url)
+      // attachMedia DOIT être avant loadSource (spec HLS.js)
       hls.attachMedia(video)
+      hls.loadSource(url)
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
@@ -365,16 +365,22 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
   useEffect(() => {
     srcRef.current = src
     if (src) initPlayer(src)
+    let cleanedUp = false
     return () => {
+      cleanedUp = true
       clearTimeout(watchdogRef.current)
       watchdogRef.current = null
-      destroyHls()
-      // Remove playing listener on cleanup
-      const video = videoRef.current
-      if (video && playingListenerRef.current) {
-        video.removeEventListener('playing', playingListenerRef.current)
-        playingListenerRef.current = null
-      }
+      // Délai minimal pour éviter la race condition React StrictMode :
+      // le destroy ne doit pas fermer le MediaSource avant que HLS.js l'ait utilisé.
+      setTimeout(() => {
+        if (!cleanedUp) return
+        destroyHls()
+        const video = videoRef.current
+        if (video && playingListenerRef.current) {
+          video.removeEventListener('playing', playingListenerRef.current)
+          playingListenerRef.current = null
+        }
+      }, 0)
     }
   }, [src, initPlayer, destroyHls])
 
