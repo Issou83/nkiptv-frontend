@@ -92,7 +92,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        enableWorker: true,
+        enableWorker: false, // disable Web Worker — MetaMask SES lockdown blocks sourceopen in worker context
         lowLatencyMode: false,
         // ── Buffer ────────────────────────────────────────────────────────────
         backBufferLength: 60,          // garde 60 s derrière pour les seeks
