@@ -35,7 +35,7 @@ const SORT_OPTIONS = [
 
 const getLogoSrc = (logo) => {
   if (!logo) return null
-  return (import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com') + '/api/proxy/logo?url=' + encodeURIComponent(logo)
+  return (import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net') + '/api/proxy/logo?url=' + encodeURIComponent(logo)
 }
 
 export default function LivePage() {

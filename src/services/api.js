@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../store'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://nkiptv-backend-production.up.railway.app'
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net'
 
 const api = axios.create({
   baseURL: BASE_URL,
