@@ -110,14 +110,26 @@ export default function PlayerPage() {
   }
 
   const streams = channel.streams || []
-  const currentStream = streams[streamIndex]
+  const playableStreams = [...streams].sort((a, b) => {
+    const score = (stream) => {
+      const url = stream?.url || ''
+      let value = 0
+      if (!url.includes('.m3u8')) value += 20
+      if (url.endsWith('.mpd') || url.includes('browser-dash')) value += 30
+      if (url.includes('viamotionhsi.netplus.ch')) value += 40
+      if (stream?.status === 'offline') value += 50
+      return value
+    }
+    return score(a) - score(b)
+  })
+  const currentStream = playableStreams[streamIndex] || streams[streamIndex]
 
   // Préférer HLS (.m3u8) sur DASH (.mpd)
   const rawStreamUrl = (() => {
     const url = currentStream?.url
     if (!url) return null
     if (url.endsWith('.mpd') || url.includes('browser-dash')) {
-      const hlsAlt = streams.find(s => s.url?.includes('.m3u8'))
+      const hlsAlt = playableStreams.find(s => s.url?.includes('.m3u8'))
       return hlsAlt?.url || channel.bestStreamUrl || url
     }
     return url
