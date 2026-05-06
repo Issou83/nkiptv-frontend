@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useAuthStore } from '../store'
+import { getPersistedAuthSnapshot, useAuthStore } from '../store'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net').replace(/\/$/, '')
 
@@ -11,7 +11,7 @@ const api = axios.create({
 
 // ── Injecter le JWT ───────────────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken
+  const token = useAuthStore.getState().accessToken || getPersistedAuthSnapshot().accessToken
   if (token && token !== 'demo') {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -28,7 +28,8 @@ api.interceptors.response.use(
     const original = err.config
     if (err.response?.status !== 401 || original._retry) return Promise.reject(err)
 
-    const { refreshToken, setTokens, logout } = useAuthStore.getState()
+    const { setTokens, logout } = useAuthStore.getState()
+    const refreshToken = useAuthStore.getState().refreshToken || getPersistedAuthSnapshot().refreshToken
     if (!refreshToken || refreshToken === 'demo') return Promise.reject(err)
 
     if (refreshing) {

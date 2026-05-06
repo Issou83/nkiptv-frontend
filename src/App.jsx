@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
-import { useAuthStore } from './store'
+import { getPersistedAuthSnapshot, useAuthStore } from './store'
 import Layout from './components/layout/Layout'
 import Splash from './components/ui/Splash'
 import AuthPage from './pages/AuthPage'
@@ -33,13 +33,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
   // Lecture directe du store — localStorage hydration is synchronous, no need to wait
   const accessToken = useAuthStore(s => s.accessToken)
   const [hydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated())
-  const persistedAccessToken = (() => {
-    try {
-      return JSON.parse(window.localStorage.getItem('nkiptv-auth') || '{}')?.state?.accessToken || null
-    } catch {
-      return null
-    }
-  })()
+  const persistedAccessToken = getPersistedAuthSnapshot().accessToken
   const effectiveAccessToken = accessToken || persistedAccessToken
   useEffect(() => {
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
@@ -57,6 +51,7 @@ export default function App() {
   const [showSplash, setShowSplash] = React.useState(true)
   // Lecture directe du store pour éviter les problèmes de getters Zustand après persist
   const accessToken = useAuthStore(s => s.accessToken)
+  const effectiveAccessToken = accessToken || getPersistedAuthSnapshot().accessToken
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1800)
@@ -69,7 +64,7 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={accessToken ? <Navigate to="/" replace /> : <AuthPage />} />
+          <Route path="/login" element={effectiveAccessToken ? <Navigate to="/" replace /> : <AuthPage />} />
 
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<HomePage />} />

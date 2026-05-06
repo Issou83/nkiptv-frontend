@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export const getPersistedAuthSnapshot = () => {
+  if (typeof window === 'undefined') return {}
+  try {
+    return JSON.parse(window.localStorage.getItem('nkiptv-auth') || '{}')?.state || {}
+  } catch {
+    return {}
+  }
+}
+
 // ── Store Auth ────────────────────────────────────────────────────────────────
 export const useAuthStore = create(
   persist(

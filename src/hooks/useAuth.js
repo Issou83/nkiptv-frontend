@@ -1,17 +1,21 @@
-import { useAuthStore } from '../store'
+import { getPersistedAuthSnapshot, useAuthStore } from '../store'
 import { authAPI } from '../services/api'
 
 export const useAuth = () => {
   const store = useAuthStore()
+  const persisted = getPersistedAuthSnapshot()
+  const accessToken = store.accessToken || persisted.accessToken
+  const user = store.user || persisted.user
+  const activeProfileId = store.activeProfileId || persisted.activeProfileId
 
   // Compute derived auth state directly from raw fields (no stale getters)
-  const isAuth = !!store.accessToken && store.accessToken !== 'demo'
-  const isDemo = store.accessToken === 'demo'
-  const isAdmin = store.user?.role === 'admin'
-  const isPremium = store.user?.role === 'admin' || ['premium', 'pro'].includes(store.user?.plan?.type)
+  const isAuth = !!accessToken && accessToken !== 'demo'
+  const isDemo = accessToken === 'demo'
+  const isAdmin = user?.role === 'admin'
+  const isPremium = user?.role === 'admin' || ['premium', 'pro'].includes(user?.plan?.type)
   const activeProfile = (() => {
-    if (!store.user?.profiles?.length) return null
-    return store.user.profiles.find(p => p._id === store.activeProfileId) || store.user.profiles[0]
+    if (!user?.profiles?.length) return null
+    return user.profiles.find(p => p._id === activeProfileId) || user.profiles[0]
   })()
 
   const login = async (email, password) => {
@@ -50,7 +54,7 @@ export const useAuth = () => {
   }
 
   return {
-    user: store.user,
+    user,
     isAuth,
     isDemo,
     isAdmin,
