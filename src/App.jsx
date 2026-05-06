@@ -33,14 +33,22 @@ function ProtectedRoute({ children, adminOnly = false }) {
   // Lecture directe du store — localStorage hydration is synchronous, no need to wait
   const accessToken = useAuthStore(s => s.accessToken)
   const [hydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated())
+  const persistedAccessToken = (() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('nkiptv-auth') || '{}')?.state?.accessToken || null
+    } catch {
+      return null
+    }
+  })()
+  const effectiveAccessToken = accessToken || persistedAccessToken
   useEffect(() => {
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
     if (useAuthStore.persist.hasHydrated()) setHydrated(true)
     return unsubscribe
   }, [])
 
-  if (!hydrated) return <PageLoader />
-  if (!accessToken) return <Navigate to="/login" replace />
+  if (!hydrated && !effectiveAccessToken) return <PageLoader />
+  if (!effectiveAccessToken) return <Navigate to="/login" replace />
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />
   return children
 }
