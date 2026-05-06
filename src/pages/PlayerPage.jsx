@@ -18,6 +18,7 @@ export default function PlayerPage() {
   const [showEpg, setShowEpg] = useState(false)
   const [streamIndex, setStreamIndex] = useState(0)
   const [showSidebar, setShowSidebar] = useState(false)
+  const currentChannelMatchesRoute = !channelId || currentChannel?.id === channelId
 
   // Charger la chaîne si accès direct via URL
   const { data: channelData } = useQuery({
@@ -27,10 +28,10 @@ export default function PlayerPage() {
       const { data } = await channelsAPI.getById(channelId)
       return data.data
     },
-    enabled: !!channelId && !currentChannel,
+    enabled: !!channelId && !currentChannelMatchesRoute,
   })
 
-  const channel = currentChannel || channelData
+  const channel = currentChannelMatchesRoute ? currentChannel : channelData
 
   // EPG actuel
   const { data: epgData } = useQuery({
@@ -44,8 +45,8 @@ export default function PlayerPage() {
   })
 
   useEffect(() => {
-    if (channelData && !currentChannel) setCurrentChannel(channelData)
-  }, [channelData])
+    if (channelData && currentChannel?.id !== channelData.id) setCurrentChannel(channelData)
+  }, [channelData, currentChannel?.id, setCurrentChannel])
 
   // Reset stream index when channel changes
   useEffect(() => {
