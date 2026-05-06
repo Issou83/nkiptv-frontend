@@ -66,7 +66,7 @@ export default api
 
 export const getProxiedLogoUrl = (logo) => {
   if (!logo) return null
-  return `${API_BASE_URL}/api/proxy/logo?url=${encodeURIComponent(logo)}`
+  return `https://images.weserv.nl/?url=${encodeURIComponent(logo)}`
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
