@@ -32,6 +32,14 @@ function ProtectedRoute({ children, adminOnly = false }) {
   const { isAdmin } = useAuth()
   // Lecture directe du store — localStorage hydration is synchronous, no need to wait
   const accessToken = useAuthStore(s => s.accessToken)
+  const [hydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated())
+  useEffect(() => {
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+    if (useAuthStore.persist.hasHydrated()) setHydrated(true)
+    return unsubscribe
+  }, [])
+
+  if (!hydrated) return <PageLoader />
   if (!accessToken) return <Navigate to="/login" replace />
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />
   return children
