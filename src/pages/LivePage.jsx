@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useChannels, useChannelStats, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
+import { getProxiedLogoUrl } from '../services/api'
 
 const CATEGORIES = [null, 'news', 'sports', 'music', 'movies', 'entertainment', 'documentary', 'kids', 'business', 'culture', 'family', 'religious']
 
@@ -35,7 +36,7 @@ const SORT_OPTIONS = [
 
 const getLogoSrc = (logo) => {
   if (!logo) return null
-  return (import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net') + '/api/proxy/logo?url=' + encodeURIComponent(logo)
+  return getProxiedLogoUrl(logo)
 }
 
 export default function LivePage() {

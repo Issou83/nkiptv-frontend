@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { epgAPI } from '../services/api'
+import { epgAPI, getProxiedLogoUrl } from '../services/api'
 import { useChannels, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
 import { format, addHours, isWithinInterval } from 'date-fns'
@@ -74,7 +74,7 @@ export default function EpgPage() {
                 <div style={{ width: 180, minWidth: 180, padding: '8px 12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'var(--bg-secondary)' }}
                   onClick={() => playChannel(channel)}>
                   {channel.logo
-                    ? <img src={channel.logo} style={{ width: 32, height: 32, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
+                    ? <img src={getProxiedLogoUrl(channel.logo)} style={{ width: 32, height: 32, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} />
                     : <span style={{ fontSize: '1.3rem' }}>📺</span>
                   }
                   <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -128,7 +128,7 @@ export default function EpgPage() {
               {channels.slice(0, 12).map(ch => (
                 <div key={ch.id} className="channel-list-item" onClick={() => playChannel(ch)} style={{ background: 'var(--bg-card)', borderRadius: 10 }}>
                   <div className="channel-list-logo">
-                    {ch.logo ? <img src={ch.logo} style={{ width: 28, height: 28, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} /> : <span>📺</span>}
+                    {ch.logo ? <img src={getProxiedLogoUrl(ch.logo)} style={{ width: 28, height: 28, objectFit: 'contain' }} alt="" onError={e => e.target.style.display = 'none'} /> : <span>📺</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>

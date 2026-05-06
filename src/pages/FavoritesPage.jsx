@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useState, useMemo } from 'react'
-import { favoritesAPI } from '../services/api'
+import { favoritesAPI, getProxiedLogoUrl } from '../services/api'
 import { useUIStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
@@ -153,7 +153,7 @@ export default function FavoritesPage() {
             <div key={ch.id} className="card channel-card" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => open(ch)}>
               <div className="channel-card-logo" style={{ height: 90 }}>
                 {ch.logo
-                  ? <img src={ch.logo} alt={ch.name} style={{ width: 50, height: 50, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                  ? <img src={getProxiedLogoUrl(ch.logo)} alt={ch.name} style={{ width: 50, height: 50, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
                   : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                 }
                 <span style={{ position: 'absolute', top: 6, right: 6 }} className={`badge ${ch.streams?.length > 0 ? 'badge-success' : 'badge-danger'}`}>
@@ -182,7 +182,7 @@ export default function FavoritesPage() {
             <div key={ch.id} className="channel-list-item" onClick={() => open(ch)}>
               <div className="channel-list-logo">
                 {ch.logo
-                  ? <img src={ch.logo} alt={ch.name} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                  ? <img src={getProxiedLogoUrl(ch.logo)} alt={ch.name} style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
                   : <span style={{ fontSize: '1.3rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                 }
               </div>

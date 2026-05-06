@@ -2,6 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useChannels, useChannelStats, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
+import { getProxiedLogoUrl } from '../services/api'
+
+const getLogoSrc = getProxiedLogoUrl
 
 const CATEGORIES = ['news', 'sports', 'music', 'movies', 'entertainment', 'documentary', 'kids', 'business', 'culture']
 
@@ -23,11 +26,6 @@ const FEATURED_COUNTRIES = [
   { code: 'CI', name: "Côte d'Ivoire", color: '#f77f00' },
   { code: 'CM', name: 'Cameroun',      color: '#007a5e' },
 ]
-
-const getLogoSrc = (logo) => {
-  if (!logo) return null
-  return (import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net') + '/api/proxy/logo?url=' + encodeURIComponent(logo)
-}
 
 function CountryCard({ country, onClick }) {
   return (

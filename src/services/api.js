@@ -1,10 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '../store'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net'
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://nkiptv.alwaysdata.net').replace(/\/$/, '')
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 20000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -44,7 +44,7 @@ api.interceptors.response.use(
     refreshing = true
 
     try {
-      const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
+      const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
       setTokens(data.data.accessToken, data.data.refreshToken)
       refreshQueue.forEach(q => q.resolve(data.data.accessToken))
       refreshQueue = []
@@ -63,6 +63,11 @@ api.interceptors.response.use(
 )
 
 export default api
+
+export const getProxiedLogoUrl = (logo) => {
+  if (!logo) return null
+  return `${API_BASE_URL}/api/proxy/logo?url=${encodeURIComponent(logo)}`
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const authAPI = {
@@ -89,9 +94,9 @@ export const channelsAPI = {
 
 // ── Proxy ─────────────────────────────────────────────────────────────────────
 export const proxyAPI = {
-  getBestStreamUrl: (channelId) => `${BASE_URL}/api/proxy/best/${channelId}`,
-  getStreamUrl: (url, country = '') => `${BASE_URL}/api/proxy/stream?url=${encodeURIComponent(url)}&country=${country}`,
-  getM3uUrl: (url) => `${BASE_URL}/api/proxy/m3u?url=${encodeURIComponent(url)}`,
+  getBestStreamUrl: (channelId) => `${API_BASE_URL}/api/proxy/best/${channelId}`,
+  getStreamUrl: (url, country = '') => `${API_BASE_URL}/api/proxy/stream?url=${encodeURIComponent(url)}&country=${country}`,
+  getM3uUrl: (url) => `${API_BASE_URL}/api/proxy/m3u?url=${encodeURIComponent(url)}`,
   checkStream: (url) => api.get(`/api/proxy/check?url=${encodeURIComponent(url)}`),
   resolve: (channelId) => api.get(`/api/proxy/resolve/${channelId}`),
 }

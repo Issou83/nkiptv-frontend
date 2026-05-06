@@ -1,6 +1,7 @@
  import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 import { useUIStore } from '../../store'
+import { API_BASE_URL } from '../../services/api'
 
 // Detect touch device for UI adaptation
 const isTouchDevice = typeof window !== 'undefined' &&
@@ -168,7 +169,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
         // StreamHealer : signaler que la chaîne est de nouveau UP
         if (channelId) {
-          fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-up', { method: 'POST' }).catch(() => {})
+          fetch(API_BASE_URL + '/api/channels/' + channelId + '/report-up', { method: 'POST' }).catch(() => {})
         }
 
         // Re-trigger après 500 ms : si le streamController est resté IDLE avec
@@ -318,7 +319,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
             onErrorRef.current?.('Stream inaccessible après plusieurs tentatives')
             // StreamHealer : signaler que la chaîne est DOWN
             if (channelId) {
-              fetch(import.meta.env.VITE_API_URL + '/api/channels/' + channelId + '/report-down', { method: 'POST' }).catch(() => {})
+              fetch(API_BASE_URL + '/api/channels/' + channelId + '/report-down', { method: 'POST' }).catch(() => {})
             }
           }
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -354,7 +355,7 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
       // Réveiller Render avant de lancer HLS (cold start peut prendre jusqu'à 30s)
       ;(async () => {
-        const backendUrl = import.meta.env.VITE_API_URL || 'https://nkiptv-backend.onrender.com'
+        const backendUrl = API_BASE_URL
         try {
           await fetch(`${backendUrl}/api/health`, { signal: AbortSignal.timeout(8000) })
         } catch (_e) {}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUIStore } from '../store'
 import { useQuery } from '@tanstack/react-query'
-import { channelsAPI, epgAPI, favoritesAPI, proxyAPI } from '../services/api'
+import { channelsAPI, epgAPI, favoritesAPI, getProxiedLogoUrl, proxyAPI } from '../services/api'
 import { CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import HLSPlayer from '../components/player/HLSPlayer'
 import { useToast } from '../components/ui/ToastContainer'
@@ -125,7 +125,7 @@ export default function PlayerPage() {
 
   const streamUrl = rawStreamUrl
     ? proxyAPI.getStreamUrl(rawStreamUrl, channel.country)
-    : proxyAPI.getBestStreamUrl(channel.id)
+    : channel.proxyUrl || (channel.bestStreamUrl ? proxyAPI.getStreamUrl(channel.bestStreamUrl, channel.country) : proxyAPI.getBestStreamUrl(channel.id))
 
   const currentProg = epgData?.current
   const nextProg = epgData?.next
@@ -157,7 +157,7 @@ export default function PlayerPage() {
             overflow: 'hidden', border: '1px solid var(--border)'
           }}>
             {channel.logo
-              ? <img src={channel.logo} style={{ width: 40, height: 40, objectFit: 'contain' }} alt=""
+              ? <img src={getProxiedLogoUrl(channel.logo)} style={{ width: 40, height: 40, objectFit: 'contain' }} alt=""
                   onError={e => e.target.style.display = 'none'} />
               : <span style={{ fontSize: '1.6rem' }}>{CATEGORY_EMOJI[channel.categories?.[0]] || '📺'}</span>
             }
@@ -295,7 +295,7 @@ export default function PlayerPage() {
                   flexShrink: 0, overflow: 'hidden'
                 }}>
                   {ch.logo
-                    ? <img src={ch.logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt=""
+                    ? <img src={getProxiedLogoUrl(ch.logo)} style={{ width: 24, height: 24, objectFit: 'contain' }} alt=""
                         onError={e => e.target.style.display = 'none'} />
                     : <span style={{ fontSize: '1rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }

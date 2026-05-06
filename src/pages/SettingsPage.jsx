@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { authAPI } from '../services/api'
+import { API_BASE_URL, authAPI } from '../services/api'
 import { useToast } from '../components/ui/ToastContainer'
 import { useUIStore } from '../store'
 
@@ -189,7 +189,7 @@ export default function SettingsPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
           <button className="btn btn-secondary btn-sm" onClick={async () => {
             try {
-              const resp = await fetch(import.meta.env.VITE_API_URL?.replace('/api', '') + '/api/health' || '/api/health')
+              const resp = await fetch(API_BASE_URL + '/api/health')
               if (resp.ok) toast.success('✅ Backend connecté')
               else toast.error('⚠️ Backend répond avec erreur ' + resp.status)
             } catch { toast.error('❌ Backend hors ligne') }
