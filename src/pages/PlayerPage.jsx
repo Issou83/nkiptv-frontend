@@ -111,7 +111,7 @@ export default function PlayerPage() {
   }
 
   const streams = channel.streams || []
-  const playableStreams = [...streams].sort((a, b) => {
+  const sortedStreams = [...streams].sort((a, b) => {
     const score = (stream) => {
       const url = stream?.url || ''
       let value = 0
@@ -134,22 +134,26 @@ export default function PlayerPage() {
     }
     return score(a) - score(b)
   })
+  const playableStreams = channel.id
+    ? [{ proxyUrl: proxyAPI.getBestStreamUrl(channel.id), quality: 'AUTO', source_origin: 'backend-best' }, ...sortedStreams]
+    : sortedStreams
   const currentStream = playableStreams[streamIndex] || streams[streamIndex]
 
   // Préférer HLS (.m3u8) sur DASH (.mpd)
   const rawStreamUrl = (() => {
+    if (currentStream?.proxyUrl) return null
     const url = currentStream?.url
     if (!url) return null
     if (url.endsWith('.mpd') || url.includes('browser-dash')) {
-      const hlsAlt = playableStreams.find(s => s.url?.includes('.m3u8'))
+      const hlsAlt = sortedStreams.find(s => s.url?.includes('.m3u8'))
       return hlsAlt?.url || channel.bestStreamUrl || url
     }
     return url
   })()
 
-  const streamUrl = rawStreamUrl
+  const streamUrl = currentStream?.proxyUrl || (rawStreamUrl
     ? proxyAPI.getStreamUrl(rawStreamUrl, channel.country)
-    : channel.proxyUrl || (channel.bestStreamUrl ? proxyAPI.getStreamUrl(channel.bestStreamUrl, channel.country) : proxyAPI.getBestStreamUrl(channel.id))
+    : channel.proxyUrl || (channel.bestStreamUrl ? proxyAPI.getStreamUrl(channel.bestStreamUrl, channel.country) : proxyAPI.getBestStreamUrl(channel.id)))
 
   const currentProg = epgData?.current
   const nextProg = epgData?.next
