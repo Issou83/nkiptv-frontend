@@ -383,14 +383,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       // attachMedia DOIT être avant loadSource (spec HLS.js)
       hls.attachMedia(video)
 
-      // Réveiller Render avant de lancer HLS (cold start peut prendre jusqu'à 30s)
-      ;(async () => {
-        const backendUrl = API_BASE_URL
-        try {
-          await fetch(`${backendUrl}/api/health`, { signal: AbortSignal.timeout(8000) })
-        } catch (_e) {}
-        if (seq === initSeqRef.current) hls.loadSource(url)
-      })()
+      // Reveille le backend sans bloquer le demarrage HLS.
+      fetch(`${API_BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) }).catch(() => {})
+      if (seq === initSeqRef.current) hls.loadSource(url)
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
