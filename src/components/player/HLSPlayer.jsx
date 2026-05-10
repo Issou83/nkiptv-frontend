@@ -7,8 +7,9 @@ import { API_BASE_URL } from '../../services/api'
 const isTouchDevice = typeof window !== 'undefined' &&
   ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
-const MAX_RETRIES = 5
+const MAX_RETRIES = 2
 const STALL_TIMEOUT_MS = 12000 // 12s sans progrès → stall détecté (live streams bufhfer en chunks)
+const STARTUP_TIMEOUT_MS = 9000
 
 export default function HLSPlayer({ src, channelId, autoplay = true, onError, onReady }) {
   const videoRef = useRef(null)
@@ -91,6 +92,15 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       setLevels([])
     }
 
+    watchdogRef.current = setTimeout(() => {
+      watchdogRef.current = null
+      if (!mountedRef.current || seq !== initSeqRef.current) return
+      const v = videoRef.current
+      if (v && v.readyState >= 2 && v.currentTime > 0) return
+      setStatus('error')
+      onErrorRef.current?.('Flux trop lent ou manifest inaccessible')
+    }, STARTUP_TIMEOUT_MS)
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: false, // disable Web Worker — MetaMask SES lockdown blocks sourceopen in worker context
@@ -108,13 +118,13 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         liveDurationInfinity: true,    // traite le stream comme infini (live)
         initialLiveManifestSize: 1,    // commence à lire dès 1 segment disponible
         // ── Retry / robustesse ────────────────────────────────────────────────
-        fragLoadingMaxRetry: 6,
+        fragLoadingMaxRetry: 2,
         fragLoadingRetryDelay: 1000,
         fragLoadingMaxRetryTimeout: 5000,
-        manifestLoadingMaxRetry: 4,
+        manifestLoadingMaxRetry: 1,
         manifestLoadingRetryDelay: 1000,
-        manifestLoadingMaxRetryTimeout: 64000,
-        levelLoadingMaxRetry: 4,
+        manifestLoadingMaxRetryTimeout: 8000,
+        levelLoadingMaxRetry: 2,
         levelLoadingRetryDelay: 1000,
         // ── Démarrage ─────────────────────────────────────────────────────────
         startPosition: -1,             // laisser HLS.js calculer la position live
@@ -125,9 +135,9 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
         abrBandWidthFactor: 0.7,
         abrBandWidthUpFactor: 0.3,
         // ── Timeouts explicites — allongés pour Render cold start (jusqu'à 30s) ──
-        fragLoadingTimeOut: 60000,
-        manifestLoadingTimeOut: 30000,
-        levelLoadingTimeOut: 30000,    // couvre aussi les audio track .m3u8
+        fragLoadingTimeOut: 12000,
+        manifestLoadingTimeOut: 7000,
+        levelLoadingTimeOut: 9000,    // couvre aussi les audio track .m3u8
         // ── Réseau ────────────────────────────────────────────────────────────
         fetchSetup: (context, initParams) => {
           try {
@@ -153,6 +163,8 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         // Stale-init guard: if a newer initPlayer call has already started, ignore this.
         if (seq !== initSeqRef.current || !mountedRef.current) return
+        clearTimeout(watchdogRef.current)
+        watchdogRef.current = null
 
         setLevels(data.levels || [])
 
@@ -244,6 +256,18 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (seq !== initSeqRef.current || !mountedRef.current) return
 
+        if (
+          data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+          data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+          data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR ||
+          data.details === Hls.ErrorDetails.LEVEL_LOAD_ERROR ||
+          data.details === Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT
+        ) {
+          setStatus('error')
+          onErrorRef.current?.('Manifest HLS inaccessible')
+          return
+        }
+
         // Retry sur 503 — backend Render en cold start
         if (!data.fatal && data.response?.code === 503) {
           console.warn('[HLS] 503 on segment, retrying after 3s...')
@@ -283,6 +307,12 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
             data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
             data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT
           ) {
+            if (retryCountRef.current >= MAX_RETRIES) {
+              setStatus('error')
+              onErrorRef.current?.('Segments HLS inaccessibles')
+              return
+            }
+            retryCountRef.current += 1
             try { hls.startLoad(-1) } catch (_e) {}
           }
           // Audio track sub-manifest timeout/error → retry (évite la boucle audioTrackLoadTimeOut)

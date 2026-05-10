@@ -115,9 +115,20 @@ export default function PlayerPage() {
     const score = (stream) => {
       const url = stream?.url || ''
       let value = 0
+      if (
+        url.includes('live-cdn-stream-euw1.') ||
+        url.includes('ncdn-live-bfm.pfd.sfr.net') ||
+        url.includes('artesimulcast.akamaized.net') ||
+        url.includes('ott.tv5monde.com') ||
+        url.includes('qwest') ||
+        url.includes('persiana')
+      ) value -= 20
+      if (url.startsWith('http://')) value += 15
       if (!url.includes('.m3u8')) value += 20
       if (url.endsWith('.mpd') || url.includes('browser-dash')) value += 30
-      if (url.includes('viamotionhsi.netplus.ch')) value += 40
+      if (url.includes('viamotionhsi.netplus.ch')) value += 70
+      if (url.includes('jmp2.uk')) value += 25
+      if (url.includes('raw.githubusercontent.com')) value += 35
       if (stream?.status === 'offline') value += 50
       return value
     }
