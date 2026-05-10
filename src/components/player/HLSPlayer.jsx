@@ -206,6 +206,15 @@ export default function HLSPlayer({ src, channelId, autoplay = true, onError, on
 
         onReadyRef.current?.()
 
+        setTimeout(() => {
+          if (!mountedRef.current || seq !== initSeqRef.current) return
+          const v = videoRef.current
+          if (!v) return
+          if (v.readyState >= 2 && v.currentTime > 0) return
+          setStatus('error')
+          onErrorRef.current?.('Flux trop lent au demarrage')
+        }, STARTUP_TIMEOUT_MS)
+
         // ── Watchdog ──────────────────────────────────────────────────────────
         // Si après 12 s la vidéo n'est pas en lecture normale, on tente une
         // récupération douce sans détruire l'instance HLS.
