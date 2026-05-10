@@ -145,7 +145,7 @@ export default function PlayerPage() {
   const freshFranceTvStream = FRANCE_TV_MASTERS[channel.id]
     ? [{ url: FRANCE_TV_MASTERS[channel.id], quality: 'AUTO', source_origin: 'francetv-master' }]
     : []
-  const useBackendBestFirst = ['France5.fr'].includes(channel.id)
+  const useBackendBestFirst = false
   const playableStreams = useBackendBestFirst
     ? [{ proxyUrl: proxyAPI.getBestStreamUrl(channel.id), quality: 'AUTO', source_origin: 'backend-best' }, ...freshFranceTvStream, ...sortedStreams]
     : [...freshFranceTvStream, ...sortedStreams]
