@@ -134,7 +134,8 @@ export default function PlayerPage() {
     }
     return score(a) - score(b)
   })
-  const playableStreams = channel.id
+  const useBackendBestFirst = ['France2.fr', 'France5.fr'].includes(channel.id)
+  const playableStreams = useBackendBestFirst
     ? [{ proxyUrl: proxyAPI.getBestStreamUrl(channel.id), quality: 'AUTO', source_origin: 'backend-best' }, ...sortedStreams]
     : sortedStreams
   const currentStream = playableStreams[streamIndex] || streams[streamIndex]
