@@ -9,6 +9,14 @@ import { useToast } from '../components/ui/ToastContainer'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
+const FRANCE_TV_MASTERS = {
+  'France2.fr': 'https://raw.githubusercontent.com/schumijo/iptv/main/playlists/francetv/france2.m3u8',
+  'France3.fr': 'https://raw.githubusercontent.com/schumijo/iptv/main/playlists/francetv/france3.m3u8',
+  'France4.fr': 'https://raw.githubusercontent.com/schumijo/iptv/main/playlists/francetv/france4.m3u8',
+  'Franceinfo.fr': 'https://raw.githubusercontent.com/schumijo/iptv/main/playlists/francetv/franceinfo.m3u8',
+  'FranceInfoTV.fr': 'https://raw.githubusercontent.com/schumijo/iptv/main/playlists/francetv/franceinfo.m3u8',
+}
+
 export default function PlayerPage() {
   const { channelId } = useParams()
   const navigate = useNavigate()
@@ -134,10 +142,13 @@ export default function PlayerPage() {
     }
     return score(a) - score(b)
   })
-  const useBackendBestFirst = ['France2.fr', 'France5.fr'].includes(channel.id)
+  const freshFranceTvStream = FRANCE_TV_MASTERS[channel.id]
+    ? [{ url: FRANCE_TV_MASTERS[channel.id], quality: 'AUTO', source_origin: 'francetv-master' }]
+    : []
+  const useBackendBestFirst = ['France5.fr'].includes(channel.id)
   const playableStreams = useBackendBestFirst
-    ? [{ proxyUrl: proxyAPI.getBestStreamUrl(channel.id), quality: 'AUTO', source_origin: 'backend-best' }, ...sortedStreams]
-    : sortedStreams
+    ? [{ proxyUrl: proxyAPI.getBestStreamUrl(channel.id), quality: 'AUTO', source_origin: 'backend-best' }, ...freshFranceTvStream, ...sortedStreams]
+    : [...freshFranceTvStream, ...sortedStreams]
   const currentStream = playableStreams[streamIndex] || streams[streamIndex]
 
   // Préférer HLS (.m3u8) sur DASH (.mpd)
