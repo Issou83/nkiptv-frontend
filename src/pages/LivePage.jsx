@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useChannels, useChannelStats, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
-import { getProxiedLogoUrl } from '../services/api'
+import ChannelLogo from '../components/ui/ChannelLogo'
 
 const CATEGORIES = [null, 'news', 'sports', 'music', 'movies', 'entertainment', 'documentary', 'kids', 'business', 'culture', 'family', 'religious']
 
@@ -33,11 +33,6 @@ const SORT_OPTIONS = [
   { value: 'name',      label: '🔤 A-Z' },
   { value: 'newest',    label: '✨ Nouveaux' },
 ]
-
-const getLogoSrc = (logo) => {
-  if (!logo) return null
-  return getProxiedLogoUrl(logo)
-}
 
 export default function LivePage() {
   const navigate = useNavigate()
@@ -177,10 +172,7 @@ export default function LivePage() {
             return (
               <div key={ch.id} className={'card channel-card' + (isCurrently ? ' channel-card-active' : '')} onClick={() => openChannel(ch)}>
                 <div className="channel-card-logo">
-                  {ch.logo
-                    ? <img src={getLogoSrc(ch.logo)} alt={ch.name} onError={e => e.target.style.display = 'none'} />
-                    : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
-                  }
+                  <ChannelLogo channel={ch} />
                   <span style={{ position: 'absolute', top: 6, right: 6 }} className={'badge ' + (ch.streams?.length > 0 ? 'badge-success' : 'badge-danger')}>
                     {ch.status === 'down' ? '⛔ HORS LIGNE' : ch.streams?.length > 0 ? '▶️ LIVE' : 'OFF'}
                   </span>
@@ -209,10 +201,7 @@ export default function LivePage() {
             return (
               <div key={ch.id} className={'channel-list-item' + (isCurrently ? ' active' : '')} onClick={() => openChannel(ch)}>
                 <div className="channel-list-logo">
-                  {ch.logo
-                    ? <img src={getLogoSrc(ch.logo)} alt={ch.name} onError={e => e.target.style.display = 'none'} />
-                    : <span>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
-                  }
+                  <ChannelLogo channel={ch} className="" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</div>

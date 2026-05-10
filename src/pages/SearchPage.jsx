@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useChannels, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
-import { getProxiedLogoUrl } from '../services/api'
+import ChannelLogo from '../components/ui/ChannelLogo'
 
 const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
@@ -135,10 +135,7 @@ export default function SearchPage() {
           {channels.map(ch => (
             <div key={ch.id} className="channel-list-item" onClick={() => open(ch)}>
               <div className="channel-list-logo">
-                {ch.logo
-                  ? <img src={getProxiedLogoUrl(ch.logo)} alt="" onError={e => e.target.style.display = 'none'} style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                  : <span style={{ fontSize: '1.3rem' }}>{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
-                }
+                <ChannelLogo channel={ch} className="" imgStyle={{ width: 32, height: 32, objectFit: 'contain' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -2,9 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useChannels, useChannelStats, CATEGORY_EMOJI, COUNTRY_FLAG } from '../hooks/useChannels'
 import { useUIStore } from '../store'
-import { getProxiedLogoUrl } from '../services/api'
-
-const getLogoSrc = getProxiedLogoUrl
+import ChannelLogo from '../components/ui/ChannelLogo'
 
 const CATEGORIES = ['news', 'sports', 'music', 'movies', 'entertainment', 'documentary', 'kids', 'business', 'culture']
 
@@ -40,10 +38,7 @@ function ChannelCard({ channel, onClick, showBadge = true }) {
   return (
     <div className="card channel-card" onClick={onClick}>
       <div className="channel-card-logo">
-        {channel.logo
-          ? <img src={getLogoSrc(channel.logo)} alt={channel.name} onError={e => e.target.style.display = 'none'} />
-          : <span className="logo-fallback">{CATEGORY_EMOJI[channel.categories?.[0]] || '📺'}</span>
-        }
+        <ChannelLogo channel={channel} />
         {showBadge && channel.streams?.length > 0 && (
           <span style={{ position: 'absolute', top: 6, right: 6 }} className="badge badge-success">LIVE</span>
         )}
@@ -138,7 +133,7 @@ export default function HomePage() {
               <div key={ch.id} className="card channel-card" onClick={() => openChannel(ch)} style={{ position: 'relative' }}>
                 <div className="channel-card-logo">
                   {ch.logo
-                    ? <img src={getLogoSrc(ch.logo)} alt={ch.name} onError={e => e.target.style.display = 'none'} />
+                    ? <ChannelLogo channel={ch} />
                     : <span className="logo-fallback">{CATEGORY_EMOJI[ch.categories?.[0]] || '📺'}</span>
                   }
                   <span style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', borderRadius: 6, padding: '2px 6px', fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>
